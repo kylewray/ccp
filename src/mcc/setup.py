@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 """ The MIT License (MIT)
 
     Copyright (c) 2017 Kyle Hollins Wray, University of Massachusetts
@@ -22,6 +20,18 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-__all__ = ["mcc_exec", "mcc_kobuki", "mcc_model", "fsc"]
 
+from distutils.core import setup
+from catkin_pkg.python_setup import generate_distutils_setup
+
+# Note: The purpose of this file is to basically automate setting PYTHONPATH
+# so that the package files can be found.
+
+# Fetch values from "package.xml" here.
+setup_args = generate_distutils_setup(
+    packages=['mcc_package'],
+    package_dir={'': 'src'},
+)
+
+setup(**setup_args)
 

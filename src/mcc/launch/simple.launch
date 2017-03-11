@@ -8,7 +8,8 @@
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
 
-  <node pkg="mcc" type="mcc_model_node" name="mcc_model_node" output="screen">
+  <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
+    <param name="agent" value="Alice" />
     <param name="update_rate" value="10" />
 
     <param name="grid_width" value="3" />
@@ -25,10 +26,6 @@
     <param name="get_action" value="~get_action" />
     <param name="get_fsc_state" value="~get_fsc_state" />
     <param name="update_fsc_state" value="~update_fsc_state" />
-
-    <param name="visualize_fsc_state" value="True" />
-    <param name="visualization_marker" value="~visualization_marker" />
-    <param name="visualization_marker_array" value="~visualization_marker_array" />
   </node>
 
   <node pkg="mcc" type="mcc_kobuki_node" name="mcc_kobuki_node" output="screen">
@@ -39,7 +36,7 @@
     <remap from="/cmd_reset_odom" to="/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
     <remap from="/mobile_base/events/bumper" to="/evt_bump" /> <!-- kobuki_msgs -->
 
-    <param name="mcc_model_namespace" value="/mcc_model_node" />
+    <param name="mcc_exec_namespace" value="/mcc_exec_node" />
 
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />

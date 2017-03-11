@@ -62,8 +62,8 @@ add_message_files(
 add_service_files(
   FILES
   GetAction.srv
-  GetBelief.srv
-  UpdateBelief.srv
+  GetFSCState.srv
+  UpdateFSC.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -167,7 +167,7 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 catkin_install_python(
-    PROGRAMS scripts/mcc_kobuki_node scripts/mcc_model_node
+    PROGRAMS scripts/mcc_kobuki_node scripts/mcc_exec_node
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -33,8 +33,8 @@ from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from kobuki_msgs.msg import BumperEvent
 
-#from mcc.msg import *
-#from mcc.srv import *
+from mcc.msg import *
+from mcc.srv import *
 
 import math
 import numpy as np
@@ -80,7 +80,7 @@ class MCCKobuki(object):
         self.recoveryY = 0.0
 
         # Setup the topics for the important services.
-        mccModelNamespace = rospy.get_param("~mcc_model_namespace", "/mcc_model_node")
+        mccModelNamespace = rospy.get_param("~mcc_exec_namespace", "/mcc_exec_node")
         self.subModelUpdateTopic = mccModelNamespace + "/model_update"
         self.srvGetActionTopic = mccModelNamespace + "/get_action"
         self.srvGetFSCStateTopic = mccModelNamespace + "/get_fsc_state"
@@ -385,15 +385,15 @@ class MCCKobuki(object):
 
         # However, if it is close enough to the goal, then update the FSC state with
         # observing a bump or not. This may fail if not enough updates have been performed.
-        rospy.wait_for_service(self.srvUpdateFSCStateTopic)
+        rospy.wait_for_service(self.srvUpdateFSCTopic)
         try:
-            srvUpdateFSC = rospy.ServiceProxy(self.srvUpdateFSCStateTopic, UpdateFSCState)
-            res = srvUpdateFSCState(self.relGoalX, self.relGoalY, observedBumpOrEdge)
+            srvUpdateFSC = rospy.ServiceProxy(self.srvUpdateFSCTopic, UpdateFSC)
+            res = srvUpdateFSC(self.relGoalX, self.relGoalY, observedBumpOrEdge)
             if not res.success:
-                rospy.logwarn("Error[MCCKobuki.update_mcc_model]: Failed to update FSC state.")
+                rospy.logwarn("Error[MCCKobuki.update_mcc_model]: Failed to update FSC.")
                 return False
         except rospy.ServiceException:
-            rospy.logerr("Error[MCCKobuki.update_mcc_model]: Service exception when updating FSC state.")
+            rospy.logerr("Error[MCCKobuki.update_mcc_model]: Service exception when updating FSC.")
             return False
 
         # Now do a service request for the MCCModel to send the current action.

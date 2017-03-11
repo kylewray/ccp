@@ -25,20 +25,22 @@
 
 import rospy
 
-from mcc_package.mcc_model import *
+from mcc_package.mcc_exec import *
 
 
 def main():
-    rospy.init_node("mcc_model_node")
+    rospy.init_node("mcc_exec_node")
 
-    mccModel = MCCModel()
-    mccModel.initialize()
+    agent = rospy.get_param("~agent", "Unknown")
+
+    mccExec = MCCExec(agent)
+    mccExec.initialize()
 
     updateRate = rospy.get_param("~update_rate", 10)
     rate = rospy.Rate(updateRate)
 
     while not rospy.is_shutdown():
-        mccModel.update()
+        mccExec.update()
 
         rate.sleep()
 
