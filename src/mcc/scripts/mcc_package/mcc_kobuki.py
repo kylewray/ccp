@@ -68,6 +68,7 @@ class MCCKobuki(object):
         self.relGoalX = 0.0
         self.relGoalY = 0.0
         self.relGoalTheta = 0.0
+        self.noActionStartTime = rospy.get_rostime()
 
         # Over time, the MCC's messages will do single-action relGoalTheta assignments. These
         # need to be tracked and accounted for over time as a permanent theta adjustment.
@@ -349,6 +350,13 @@ class MCCKobuki(object):
                 True if successful and movement should be performed; False otherwise.
         """
 
+        # Allow for a no-action to actually wait for a second.
+        noActionDuration = 5.0
+        currentTime = rospy.get_rostime()
+
+        if self.noActionStartTime.to_sec() + noActionDuration > currentTime.to_sec():
+            return True
+
         # Compute the distance to the goal given the positions, as well as the theta goal.
         errorX = self.goalX - self.x
         errorY = self.goalY - self.y
@@ -416,6 +424,9 @@ class MCCKobuki(object):
         self.relGoalX = res.goal_x
         self.relGoalY = res.goal_y
         self.relGoalTheta = res.goal_theta
+
+        if abs(res.goal_x) < 0.01 and abs(res.goal_y) < 0.01:
+            self.noActionStartTime = rospy.get_rostime()
 
         self.permanentThetaAdjustment += self.relGoalTheta
 

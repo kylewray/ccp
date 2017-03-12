@@ -193,7 +193,7 @@ class MCCExec(object):
         self.algorithmIsInitialized = True
 
     def uninitialize_algorithm(self):
-        """ Uninitialize the POMDP algorithm. """
+        """ Uninitialize the MCC algorithm. """
 
         if not self.algorithmIsInitialized:
             rospy.logwarn("Warn[MCCExec.uninitialize_algorithm]: Algorithm has not been initialized.")
@@ -208,7 +208,7 @@ class MCCExec(object):
 
     def sub_occupancy_grid(self, msg):
         """ A subscriber for OccupancyGrid messages. This converges any 2d map
-            into a set of POMDP states. This is a static method to work as a ROS callback.
+            into a set of MCC states. This is a static method to work as a ROS callback.
 
             Parameters:
                 msg     --  The OccupancyGrid message data.
@@ -219,14 +219,14 @@ class MCCExec(object):
 
     def handle_occupancy_grid_message(self):
         """ A handler for OccupancyGrid messages. This converges any 2d map
-            into a set of POMDP states. This is a static method to work as a ROS callback.
+            into a set of MCC states. This is a static method to work as a ROS callback.
         """
 
         if self.occupancyGridMsg is None:
             return
         msg = self.occupancyGridMsg
 
-        rospy.loginfo("Info[MCCExec.sub_occupancy_grid]: Received map. Creating a new POMDP.")
+        rospy.loginfo("Info[MCCExec.sub_occupancy_grid]: Received map. Creating a new MCC.")
 
         # Remember map information.
         self.mapWidth = msg.info.width

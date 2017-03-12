@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<launch>
+  <param name="robot_description" command="$(find xacro)/xacro.py $(find kobuki_description)/urdf/kobuki_standalone.urdf.xacro" />
+
+  <group ns="alice">
+    <remap from="map" to="/map" />
+
+    <param name="tf_prefix" value="alice_tf" />
+
+    <include file="$(find mcc)/launch/robot.launch">
+      <arg name="agent" value="Alice" />
+    </include>
+  </group>
+
+  <group ns="bob">
+    <remap from="map" to="/map" />
+
+    <param name="tf_prefix" value="bob_tf" />
+
+    <include file="$(find mcc)/launch/robot.launch">
+      <arg name="agent" value="Bob" />
+    </include>
+  </group>
+
+</launch>
+

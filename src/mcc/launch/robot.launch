@@ -1,15 +1,12 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="map_name" default="$(find mcc)/maps/simple.yaml" />
+  <arg name="agent" />
 
-  <include file="$(find mcc)/launch/rviz_nav.launch" />
-
-  <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg map_name)" />
-
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
+  <include file="$(find mcc)/launch/mcc_kobuki_full.launch" />
+  <!-- <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
 
   <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
-    <param name="agent" value="Alice" />
+    <param name="agent" value="$(arg agent)" />
     <param name="update_rate" value="10" />
 
     <param name="grid_width" value="3" />
@@ -18,25 +15,25 @@
     <param name="base_probability_of_action_success" value="0.9" />
     <param name="penalty_for_freespace" value="0.05" />
 
-    <param name="sub_occupancy_grid" value="/map" />
+    <param name="sub_occupancy_grid" value="map" />
 
     <param name="sub_map_pose_estimate" value="/initialpose" />
     <param name="sub_map_nav_goal" value="/move_base_simple/goal" />
 
-    <param name="get_action" value="~get_action" />
-    <param name="get_fsc_state" value="~get_fsc_state" />
-    <param name="update_fsc_state" value="~update_fsc_state" />
+    <param name="get_action" value="get_action" />
+    <param name="get_fsc_state" value="get_fsc_state" />
+    <param name="update_fsc_state" value="update_fsc_state" />
   </node>
 
   <node pkg="mcc" type="mcc_kobuki_node" name="mcc_kobuki_node" output="screen">
     <!-- Note "remap" for commands 'pushes' data from something to something else. Conversely,
          information 'flows' from something to something else. Hence the remapping below. -->
-    <remap from="/base_pose_ground_truth" to="/odom" /> <!-- nav_msgs -->
-    <remap from="/cmd_vel" to="/mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
-    <remap from="/cmd_reset_odom" to="/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
-    <remap from="/mobile_base/events/bumper" to="/evt_bump" /> <!-- kobuki_msgs -->
+    <remap from="base_pose_ground_truth" to="odom" /> <!-- nav_msgs -->
+    <remap from="cmd_vel" to="mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
+    <remap from="cmd_reset_odom" to="mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
+    <remap from="mobile_base/events/bumper" to="evt_bump" /> <!-- kobuki_msgs -->
 
-    <param name="mcc_exec_namespace" value="/mcc_exec_node" />
+    <param name="mcc_exec_namespace" value="mcc_exec_node" />
 
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />
@@ -50,10 +47,12 @@
 
     <param name="desired_velocity" value="0.2" />
 
-    <param name="sub_kobuki_odom" value="/odom" />
-    <param name="sub_kobuki_bump" value="/evt_bump" />
-    <param name="pub_kobuki_vel" value="/cmd_vel" />
-    <param name="pub_kobuki_reset_odom" value="/cmd_reset_odom" />
+    <param name="sub_kobuki_odom" value="odom" />
+    <param name="sub_kobuki_bump" value="evt_bump" />
+    <param name="pub_kobuki_vel" value="cmd_vel" />
+    <param name="pub_kobuki_reset_odom" value="cmd_reset_odom" />
+
+    <param name="pub_path" value="path" />
 
     <param name="sub_map_pose_estimate" value="/initialpose" />
     <param name="sub_map_nav_goal" value="/move_base_simple/goal" />
