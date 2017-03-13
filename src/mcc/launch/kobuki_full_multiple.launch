@@ -1,20 +1,29 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="delta_x"   default="0.0"/>
-  <arg name="delta_y"   default="0.0"/>
-  <arg name="delta_yaw" default="0.0"/>
+  <arg name="agent_name" default="Unknown"/>
+  <arg name="code_name" default="unknown"/>
 
-  <!-- <include file="$(find kobuki_node)/launch/minimal.launch"/> -->
-  <include file="$(find kobuki_softnode)/launch/full.launch"/>
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_yaw" default="0.0"/>
+
+  <include file="$(find mcc)/launch/kobuki_full_custom_tf.launch">
+    <arg name="code_name" value="$(arg code_name)"/>
+  </include>
 
   <node pkg="fake_localization" name="fake_localization" type="fake_localization">
-    <remap from="base_pose_ground_truth" to="odom"/>
-    <param name="delta_x"   value="$(arg delta_x)"/>
-    <param name="delta_y"   value="$(arg delta_y)"/>
-    <param name="delta_yaw" value="$(arg delta_yaw)"/>
+<!--    <param name="tf_prefix" value="$(arg code_name)"/> -->
+
+    <remap from="base_pose_ground_truth" to="/$(arg code_name)/odom"/>
+
+    <param name="odom_frame_id" value="/$(arg code_name)/odom"/>
+    <param name="base_frame_id" value="/$(arg code_name)/base_link"/>
+    <param name="delta_x" value="$(arg init_x)"/>
+    <param name="delta_y" value="$(arg init_y)"/>
+    <param name="delta_yaw" value="$(arg init_yaw)"/>
   </node>
 
-  <!--
+<!--
   <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
     <rosparam file="$(find kobuki_softapps)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find kobuki_softapps)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
@@ -23,7 +32,7 @@
     <rosparam file="$(find kobuki_softapps)/param/dwa_local_planner_params.yaml" command="load" />
     <remap from="cmd_vel" to="mobile_base/commands/velocity"/>
   </node>
-  -->
+-->
 
 </launch>
 

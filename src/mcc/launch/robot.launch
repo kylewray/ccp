@@ -1,39 +1,55 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="agent" />
+  <arg name="agent_name" default="Unknown"/>
+  <arg name="code_name" default="unknown"/>
 
-  <include file="$(find mcc)/launch/mcc_kobuki_full.launch" />
-  <!-- <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_yaw" default="0.0"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="0 0 0 0 0 0 1 /map /$(arg code_name)/odom 50" />
+
+<!--  <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
+  <include file="$(find mcc)/launch/kobuki_full_multiple.launch">
+<!--    <param name="tf_prefix" value="$(arg code_name)"/> -->
+
+    <arg name="agent_name" value="$(arg agent_name)"/>
+    <arg name="code_name" value="$(arg code_name)"/>
+    <arg name="init_x" value="$(arg init_x)"/>
+    <arg name="init_y" value="$(arg init_y)"/>
+    <arg name="init_yaw" value="$(arg init_yaw)"/>
+  </include>
 
   <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
-    <param name="agent" value="$(arg agent)" />
-    <param name="update_rate" value="10" />
+<!--    <param name="tf_prefix" value="$(arg code_name)"/> -->
 
-    <param name="grid_width" value="3" />
-    <param name="grid_height" value="3" />
+    <param name="agent_name" value="$(arg agent_name)"/>
+    <param name="update_rate" value="10"/>
 
-    <param name="base_probability_of_action_success" value="0.9" />
-    <param name="penalty_for_freespace" value="0.05" />
+    <param name="grid_width" value="3"/>
+    <param name="grid_height" value="3"/>
 
-    <param name="sub_occupancy_grid" value="map" />
+    <param name="base_probability_of_action_success" value="0.9"/>
+    <param name="penalty_for_freespace" value="0.05"/>
 
-    <param name="sub_map_pose_estimate" value="/initialpose" />
-    <param name="sub_map_nav_goal" value="/move_base_simple/goal" />
+    <param name="sub_occupancy_grid" value="/map"/>
 
-    <param name="get_action" value="get_action" />
-    <param name="get_fsc_state" value="get_fsc_state" />
-    <param name="update_fsc_state" value="update_fsc_state" />
+    <param name="sub_map_pose_estimate" value="/initialpose"/>
+    <param name="sub_map_nav_goal" value="/move_base_simple/goal"/>
+
+    <param name="model_update" value="/$(arg code_name)/mcc_exec_node/model_update"/>
+    <param name="get_action" value="/$(arg code_name)/mcc_exec_node/get_action"/>
+    <param name="get_fsc_state" value="/$(arg code_name)/mcc_exec_node/get_fsc_state"/>
+    <param name="update_fsc" value="/$(arg code_name)/mcc_exec_node/update_fsc"/>
   </node>
 
   <node pkg="mcc" type="mcc_kobuki_node" name="mcc_kobuki_node" output="screen">
     <!-- Note "remap" for commands 'pushes' data from something to something else. Conversely,
          information 'flows' from something to something else. Hence the remapping below. -->
-    <remap from="base_pose_ground_truth" to="odom" /> <!-- nav_msgs -->
-    <remap from="cmd_vel" to="mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
-    <remap from="cmd_reset_odom" to="mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
-    <remap from="mobile_base/events/bumper" to="evt_bump" /> <!-- kobuki_msgs -->
-
-    <param name="mcc_exec_namespace" value="mcc_exec_node" />
+    <remap from="/$(arg code_name)/base_pose_ground_truth" to="/$(arg code_name)/odom" /> <!-- nav_msgs -->
+    <remap from="/$(arg code_name)/cmd_vel" to="/$(arg code_name)/mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
+    <remap from="/$(arg code_name)/cmd_reset_odom" to="/$(arg code_name)/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
+    <remap from="/$(arg code_name)/mobile_base/events/bumper" to="/$(arg code_name)/evt_bump" /> <!-- kobuki_msgs -->
 
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />
@@ -47,15 +63,20 @@
 
     <param name="desired_velocity" value="0.2" />
 
-    <param name="sub_kobuki_odom" value="odom" />
-    <param name="sub_kobuki_bump" value="evt_bump" />
-    <param name="pub_kobuki_vel" value="cmd_vel" />
-    <param name="pub_kobuki_reset_odom" value="cmd_reset_odom" />
+    <param name="sub_kobuki_odom" value="/$(arg code_name)/odom" />
+    <param name="sub_kobuki_bump" value="/$(arg code_name)/evt_bump" />
+    <param name="pub_kobuki_vel" value="/$(arg code_name)/cmd_vel" />
+    <param name="pub_kobuki_reset_odom" value="/$(arg code_name)/cmd_reset_odom" />
 
-    <param name="pub_path" value="path" />
+    <param name="pub_path" value="/$(arg code_name)/path" />
 
     <param name="sub_map_pose_estimate" value="/initialpose" />
     <param name="sub_map_nav_goal" value="/move_base_simple/goal" />
+
+    <param name="model_update" value="/$(arg code_name)/mcc_exec_node/model_update" />
+    <param name="get_action" value="/$(arg code_name)/mcc_exec_node/get_action" />
+    <param name="get_fsc_state" value="/$(arg code_name)/mcc_exec_node/get_fsc_state" />
+    <param name="update_fsc" value="/$(arg code_name)/mcc_exec_node/update_fsc" />
   </node>
 </launch>
 

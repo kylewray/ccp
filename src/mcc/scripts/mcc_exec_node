@@ -31,12 +31,12 @@ from mcc_package.mcc_exec import *
 def main():
     rospy.init_node("mcc_exec_node")
 
-    agent = rospy.get_param("~agent", "Unknown")
+    agent = rospy.get_param(rospy.search_param('agent_name'))
 
     mccExec = MCCExec(agent)
     mccExec.initialize()
 
-    updateRate = rospy.get_param("~update_rate", 10)
+    updateRate = rospy.get_param("update_rate", 10)
     rate = rospy.Rate(updateRate)
 
     while not rospy.is_shutdown():

@@ -80,8 +80,8 @@ class MCCExec(object):
 
         # This is the number of x and y states that will be created using the map. Obstacle states
         # will, of course, be omitted.
-        self.gridWidth = rospy.get_param("~grid_width", 3)
-        self.gridHeight = rospy.get_param("~grid_height", 3)
+        self.gridWidth = rospy.get_param(rospy.search_param('grid_width'))
+        self.gridHeight = rospy.get_param(rospy.search_param('grid_height'))
 
         # Store if we performed the initial theta adjustment and the final goal theta adjustment
         self.performedInitialPoseAdjustment = False
@@ -110,38 +110,43 @@ class MCCExec(object):
     def initialize(self):
         """ Initialize the MCCExec class, mainly registering subscribers and services. """
 
-        subOccupancyGridTopic = rospy.get_param("~sub_occupancy_grid", "/map")
+        subOccupancyGridTopic = rospy.get_param(rospy.search_param('sub_occupancy_grid'))
         self.subOccupancyGrid = rospy.Subscriber(subOccupancyGridTopic,
                                                  OccupancyGrid,
                                                  self.sub_occupancy_grid)
 
-        subMapPoseEstimateTopic = rospy.get_param("~sub_map_pose_estimate", "/initialpose")
+        subMapPoseEstimateTopic = rospy.get_param(rospy.search_param('sub_map_pose_estimate'))
         self.subMapPoseEstimate = rospy.Subscriber(subMapPoseEstimateTopic,
                                                    PoseWithCovarianceStamped,
                                                    self.sub_map_pose_estimate)
 
-        subMapNavGoalTopic = rospy.get_param("~sub_map_nav_goal", "/move_base_simple/goal")
+        subMapNavGoalTopic = rospy.get_param(rospy.search_param('sub_map_nav_goal'))
         self.subMapNavGoal = rospy.Subscriber(subMapNavGoalTopic,
                                               PoseStamped,
                                               self.sub_map_nav_goal)
 
-        pubModelUpdateTopic = rospy.get_param("~model_update", "~model_update")
+        pubModelUpdateTopic = rospy.get_param(rospy.search_param('model_update'))
         self.pubModelUpdate = rospy.Publisher(pubModelUpdateTopic, ModelUpdate, queue_size=10)
 
-        srvGetActionTopic = rospy.get_param("~get_action", "~get_action")
+        srvGetActionTopic = rospy.get_param(rospy.search_param('get_action'))
         self.srvGetAction = rospy.Service(srvGetActionTopic,
                                           GetAction,
                                           self.srv_get_action)
 
-        srvGetFSCStateTopic = rospy.get_param("~get_fsc_state", "~get_fsc_state")
+        srvGetFSCStateTopic = rospy.get_param(rospy.search_param('get_fsc_state'))
         self.srvGetFSCState = rospy.Service(srvGetFSCStateTopic,
                                             GetFSCState,
                                             self.srv_get_fsc_state)
 
-        srvUpdateFSCTopic = rospy.get_param("~update_fsc", "~update_fsc")
+        srvUpdateFSCTopic = rospy.get_param(rospy.search_param('update_fsc'))
         self.srvUpdateFSC = rospy.Service(srvUpdateFSCTopic,
-                                             UpdateFSC,
-                                             self.srv_update_fsc)
+                                          UpdateFSC,
+                                          self.srv_update_fsc)
+
+        print("*///** %s ***" % (pubModelUpdateTopic))
+        print("*///** %s ***" % (srvGetActionTopic))
+        print("*///** %s ***" % (srvGetFSCStateTopic))
+        print("*///** %s ***" % (srvUpdateFSCTopic))
 
     def update(self):
         """ Update the MCCExec object. """

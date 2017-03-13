@@ -3,22 +3,30 @@
   <param name="robot_description" command="$(find xacro)/xacro.py $(find kobuki_description)/urdf/kobuki_standalone.urdf.xacro" />
 
   <group ns="alice">
-    <remap from="map" to="/map" />
+ <!--   <remap from="map" to="/map" /> -->
 
-    <param name="tf_prefix" value="alice_tf" />
+    <param name="tf_prefix" value="alice" />
 
     <include file="$(find mcc)/launch/robot.launch">
-      <arg name="agent" value="Alice" />
+      <arg name="agent_name" value="Alice" />
+      <arg name="code_name" value="alice" />
+      <arg name="init_x" value="-1.0" />
+      <arg name="init_y" value="0.0" />
+      <arg name="init_yaw" value="0.0" />
     </include>
   </group>
 
   <group ns="bob">
-    <remap from="map" to="/map" />
+<!--    <remap from="map" to="/map" /> -->
 
-    <param name="tf_prefix" value="bob_tf" />
+    <param name="tf_prefix" value="bob" />
 
     <include file="$(find mcc)/launch/robot.launch">
-      <arg name="agent" value="Bob" />
+      <arg name="agent_name" value="Bob" />
+      <arg name="code_name" value="bob" />
+      <arg name="init_x" value="1.0" />
+      <arg name="init_y" value="0.0" />
+      <arg name="init_yaw" value="0.0" />
     </include>
   </group>
 

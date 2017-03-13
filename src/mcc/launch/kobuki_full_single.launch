@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="init_x" default="0.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="init_yaw" default="0.0"/>
+
+  <!-- <include file="$(find kobuki_node)/launch/minimal.launch"/> -->
+  <include file="$(find kobuki_softnode)/launch/full.launch"/>
+
+  <node pkg="fake_localization" name="fake_localization" type="fake_localization">
+    <remap from="base_pose_ground_truth" to="/odom"/>
+    <!-- <param name="odom_frame_id" value="/odom" /> -->
+    <!-- <param name="base_frame_id" value="/base_link" /> -->
+    <param name="delta_x" value="$(arg init_x)" />
+    <param name="delta_y" value="$(arg init_y)" />
+    <param name="delta_yaw" value="$(arg init_yaw)" />
+  </node>
+
+<!--
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find kobuki_softapps)/param/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find kobuki_softapps)/param/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find kobuki_softapps)/param/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find kobuki_softapps)/param/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find kobuki_softapps)/param/dwa_local_planner_params.yaml" command="load" />
+    <remap from="cmd_vel" to="mobile_base/commands/velocity"/>
+  </node>
+-->
+
+</launch>
+

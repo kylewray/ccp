@@ -81,29 +81,36 @@ class MCCKobuki(object):
         self.recoveryY = 0.0
 
         # Setup the topics for the important services.
-        mccModelNamespace = rospy.get_param("~mcc_exec_namespace", "/mcc_exec_node")
-        self.subModelUpdateTopic = mccModelNamespace + "/model_update"
-        self.srvGetActionTopic = mccModelNamespace + "/get_action"
-        self.srvGetFSCStateTopic = mccModelNamespace + "/get_fsc_state"
-        self.srvUpdateFSCTopic = mccModelNamespace + "/update_fsc"
+        self.subModelUpdateTopic = rospy.get_param(rospy.search_param('model_update'))
+        self.srvGetActionTopic = rospy.get_param(rospy.search_param('get_action'))
+        self.srvGetFSCStateTopic = rospy.get_param(rospy.search_param('get_fsc_state'))
+        self.srvUpdateFSCTopic = rospy.get_param(rospy.search_param('update_fsc'))
+
+        print("*** %s ***" % (self.subModelUpdateTopic))
+        print("*** %s ***" % (self.srvGetActionTopic))
+        print("*** %s ***" % (self.srvGetFSCStateTopic))
+        print("*** %s ***" % (self.srvUpdateFSCTopic))
 
         # The distance at which we terminate saying that we're at the goal,
         # in meters and radians, respectively.
-        self.atPositionGoalThreshold = rospy.get_param("~at_position_goal_threshold", 0.05)
-        self.atThetaGoalThreshold = rospy.get_param("~at_theta_goal_threshold", 0.05)
-        self.recoveryDistanceThreshold = rospy.get_param("~recovery_distance_threshold", 0.1)
+        self.atPositionGoalThreshold = rospy.get_param(rospy.search_param('at_position_goal_threshold'))
+        self.atThetaGoalThreshold = rospy.get_param(rospy.search_param('at_theta_goal_threshold'))
+        self.recoveryDistanceThreshold = rospy.get_param(rospy.search_param('recovery_distance_threshold'))
 
         # PID control variables.
         self.pidDerivator = 0.0
         self.pidIntegrator = 0.0
-        self.pidIntegratorBounds = rospy.get_param("~pid_integrator_bounds", 0.05)
+        self.pidIntegratorBounds = rospy.get_param(rospy.search_param('pid_integrator_bounds'))
 
         # Load the gains for PID control.
-        self.pidThetaKp = rospy.get_param("~pid_theta_Kp", 1.0)
-        self.pidThetaKi = rospy.get_param("~pid_theta_Ki", 0.2)
-        self.pidThetaKd = rospy.get_param("~pid_theta_Kd", 0.2)
+        self.pidThetaKp = rospy.get_param(rospy.search_param('pid_theta_Kp'))
+        self.pidThetaKi = rospy.get_param(rospy.search_param('pid_theta_Ki'))
+        self.pidThetaKd = rospy.get_param(rospy.search_param('pid_theta_Kd'))
 
-        self.desiredVelocity = rospy.get_param("~desired_velocity", 0.2)
+        self.desiredVelocity = rospy.get_param(rospy.search_param('desired_velocity'))
+        print("*** %s ***" % (rospy.search_param('sub_kobuki_odom')))
+        print("*** %s ***" % (rospy.search_param('pub_kobuki_vel')))
+        print("*** %s ***" % (rospy.search_param('pub_path')))
 
         # Remember the path.
         self.rawPath = list()
@@ -133,23 +140,27 @@ class MCCKobuki(object):
                                                ModelUpdate,
                                                self.sub_model_update)
 
-        subKobukiOdomTopic = rospy.get_param("~sub_kobuki_odom", "/odom")
+        print("*** %s ***" % (rospy.search_param('sub_kobuki_odom')))
+        print("*** %s ***" % (rospy.search_param('pub_kobuki_vel')))
+        print("*** %s ***" % (rospy.search_param('pub_path')))
+
+        subKobukiOdomTopic = rospy.get_param(rospy.search_param('sub_kobuki_odom'))
         self.subKobukiOdom = rospy.Subscriber(subKobukiOdomTopic,
                                               Odometry,
                                               self.sub_kobuki_odom)
 
-        subKobukiBumpTopic = rospy.get_param("~sub_kobuki_bump", "/evt_bump")
+        subKobukiBumpTopic = rospy.get_param(rospy.search_param('sub_kobuki_bump'))
         self.subKobukiBump = rospy.Subscriber(subKobukiBumpTopic,
                                               BumperEvent,
                                               self.sub_kobuki_bump)
 
-        pubKobukiVelTopic = rospy.get_param("~pub_kobuki_vel", "/cmd_vel")
+        pubKobukiVelTopic = rospy.get_param(rospy.search_param('pub_kobuki_vel'))
         self.pubKobukiVel = rospy.Publisher(pubKobukiVelTopic, Twist, queue_size=32)
 
-        pubKobukiResetOdomTopic = rospy.get_param("~pub_kobuki_reset_odom", "/cmd_reset_odom")
+        pubKobukiResetOdomTopic = rospy.get_param(rospy.search_param('pub_kobuki_reset_odom'))
         self.pubKobukiResetOdom = rospy.Publisher(pubKobukiResetOdomTopic, Empty, queue_size=32)
 
-        pubPathTopic = rospy.get_param("~pub_path", "/path")
+        pubPathTopic = rospy.get_param(rospy.search_param('pub_path'))
         self.pubPath = rospy.Publisher(pubPathTopic, Path, queue_size=32)
 
         self.started = True
@@ -280,7 +291,7 @@ class MCCKobuki(object):
         if self.lastPathPublishTime.to_sec() + publishRate <= currentTime.to_sec():
             # Add to raw path with a timestamped pose from odometers.
             poseStamped = PoseStamped()
-            poseStamped.header.frame_id = rospy.get_param("~sub_kobuki_odom", "/odom")
+            poseStamped.header.frame_id = rospy.get_param(rospy.search_param('sub_kobuki_odom'))
             poseStamped.header.stamp = currentTime
             poseStamped.pose = msg.pose.pose
 
@@ -288,7 +299,7 @@ class MCCKobuki(object):
 
             # Create and publish the path.
             path = Path()
-            path.header.frame_id = rospy.get_param("~sub_kobuki_odom", "/odom")
+            path.header.frame_id = rospy.get_param(rospy.search_param('sub_kobuki_odom'))
             path.header.stamp = currentTime
             path.poses = self.rawPath
 
