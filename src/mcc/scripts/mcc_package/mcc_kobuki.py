@@ -86,11 +86,6 @@ class MCCKobuki(object):
         self.srvGetFSCStateTopic = rospy.get_param(rospy.search_param('get_fsc_state'))
         self.srvUpdateFSCTopic = rospy.get_param(rospy.search_param('update_fsc'))
 
-        print("*** %s ***" % (self.subModelUpdateTopic))
-        print("*** %s ***" % (self.srvGetActionTopic))
-        print("*** %s ***" % (self.srvGetFSCStateTopic))
-        print("*** %s ***" % (self.srvUpdateFSCTopic))
-
         # The distance at which we terminate saying that we're at the goal,
         # in meters and radians, respectively.
         self.atPositionGoalThreshold = rospy.get_param(rospy.search_param('at_position_goal_threshold'))
@@ -108,9 +103,6 @@ class MCCKobuki(object):
         self.pidThetaKd = rospy.get_param(rospy.search_param('pid_theta_Kd'))
 
         self.desiredVelocity = rospy.get_param(rospy.search_param('desired_velocity'))
-        print("*** %s ***" % (rospy.search_param('sub_kobuki_odom')))
-        print("*** %s ***" % (rospy.search_param('pub_kobuki_vel')))
-        print("*** %s ***" % (rospy.search_param('pub_path')))
 
         # Remember the path.
         self.rawPath = list()

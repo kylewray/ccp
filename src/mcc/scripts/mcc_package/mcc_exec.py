@@ -143,11 +143,6 @@ class MCCExec(object):
                                           UpdateFSC,
                                           self.srv_update_fsc)
 
-        print("*///** %s ***" % (pubModelUpdateTopic))
-        print("*///** %s ***" % (srvGetActionTopic))
-        print("*///** %s ***" % (srvGetFSCStateTopic))
-        print("*///** %s ***" % (srvUpdateFSCTopic))
-
     def update(self):
         """ Update the MCCExec object. """
 
@@ -354,15 +349,7 @@ class MCCExec(object):
             return GetActionResponse(False, 0.0, 0.0, 0.0)
 
         # Randomly select an action following the stochastic FSC.
-        action = list(self.fsc.psi[self.fscState].values())[0]
-        current = 0.0
-        target = random.random()
-
-        for iterAction, iterProbability in self.fsc.psi[self.fscState].items():
-            current += iterProbability
-            if current >= target:
-                action = iterAction
-                break
+        action = self.fsc.get_action(self.fscState)
 
         rospy.loginfo("Info[MCCExec.srv_get_action]: Agent '%s' has selected action '%s'." % (self.agent, str(action)))
 
@@ -428,7 +415,7 @@ class MCCExec(object):
         action = (actionX, actionY)
 
         try:
-            actionIndex = self.mcc.actions[self.agent].index(action)
+            actionIndex = self.mcc.action_factor.index(action)
         except ValueError:
             rospy.logerr("Error[MCCExec.srv_update_fsc]: Invalid action given: [%i, %i]." % (actionX, actionY))
             return UpdateFSCResponse(False)
@@ -437,23 +424,13 @@ class MCCExec(object):
         observation = req.bump_observed
 
         try:
-            observationIndex = self.mcc.observations[self.agent].index(observation)
+            observationIndex = self.mcc.observation_factor.index(observation)
         except ValueError:
             rospy.logerr("Error[MCCExec.srv_update_fsc]: Invalid observation given: %s." % (str(req.bump_observed)))
             return UpdateFSCResponse(False)
 
         # Update the FSC state by randomly selecting a successor FSC state.
-        successor = list(self.fsc.eta[self.fscState][action][observation].values())[0]
-        current = 0.0
-        target = random.random()
-
-        for iterSuccessor, iterProbability in self.fsc.eta[self.fscState][action][observation].items():
-            current += iterProbability
-            if current >= target:
-                successor = iterSuccessor
-                break
-
-        self.fscState = successor
+        self.fscState = self.fsc.get_successor(self.fscState, action, observation)
 
         rospy.loginfo("Info[MCCExec.srv_update_fsc]: Agent '%s' has selected successor FSC state '%s'." % (self.agent, str(self.fscState)))
 

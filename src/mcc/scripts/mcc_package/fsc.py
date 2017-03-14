@@ -28,6 +28,7 @@ import sys
 thisFilePath = os.path.dirname(os.path.realpath(__file__))
 
 import pickle
+import random
 
 
 class FSC(object):
@@ -46,12 +47,67 @@ class FSC(object):
         self.n = n
 
         self.Q = ["%s FSC State %i" % (self.agent, s) for s in range(self.n)]
-        self.psi = {q: {a: 1.0 / len(mcc.actions[self.agent]) for a in mcc.actions[self.agent]} \
+        self.psi = {q: {a: 1.0 / len(mcc.action_factor) for a in mcc.action_factor} \
                     for q in self.Q}
         self.eta = {q: {a: {o: {qp: 1.0 / len(self.Q) for qp in self.Q} \
-                            for o in mcc.observations[self.agent]} \
-                        for a in mcc.actions[self.agent]} \
+                            for o in mcc.observation_factor} \
+                        for a in mcc.action_factor} \
                     for q in self.Q}
+
+    def get_initial_state(self):
+        """ Return the initial state of the FSC.
+
+            Returns:
+                The initial state (in Q) of the FSC.
+        """
+
+        return self.Q[0]
+
+    def get_action(self, state):
+        """ Return a random action following the stochastic FSC.
+
+            Parameters:
+                state   --  The FSC internal state (from Q).
+
+            Returns:
+                The randomly selected action (shared by MCC).
+        """
+
+        action = list(self.psi[state].values())[0]
+        current = 0.0
+        target = random.random()
+
+        for iterAction, iterProbability in self.psi[state].items():
+            current += iterProbability
+            if current >= target:
+                action = iterAction
+                break
+
+        return action
+
+    def get_successor(self, state, action, observation):
+        """ Return a random successor state following the stochastic FSC.
+
+            Parameters:
+                state       --  The FSC internal state (from Q).
+                action      --  The action taken (shared by MCC).
+                observation --  The observation made (shared by MCC).
+
+            Returns:
+                A randomly selected successor (from Q).
+        """
+
+        successor = list(self.eta[state][action][observation].values())[0]
+        current = 0.0
+        target = random.random()
+
+        for iterSuccessor, iterProbability in self.eta[state][action][observation].items():
+            current += iterProbability
+            if current >= target:
+                successor = iterSuccessor
+                break
+
+        return successor
 
     def save(self):
         """ Convert this to a JSON-like format and save it to the policy folder. """
@@ -64,7 +120,6 @@ class FSC(object):
         
         with open(os.path.join(thisFilePath, "policies", "%s.fsc" % (self.agent)), 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-
 
     def load(self):
         """ Load the policy from the policy folder. """

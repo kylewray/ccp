@@ -24,64 +24,111 @@
 
 import math
 import itertools as it
+import random
 
 from fsc import *
 
 
 class MCC(object):
+    """ A mixed collaborative-competitive (MCC) model with group dominant rewards and slack. """
 
-    def __init__(self, agents=["Alice", "Bob"], gridWidth=3, gridHeight=3, objectiveStates=dict()):
+    def __init__(self, gridWidth=3, gridHeight=3, objectiveStates=list()):
         """ The constructor for the MCC class.
 
             Parameters:
-                agents              --  The agents in the 'Mars Meeting' domain.
                 gridWidth           --  The width of the grid world.
                 gridHeight          --  The height of the grid world.
-                objectiveStates     --  The objective states (0-indexed, 2-tuples) dictionary for each agent.
+                objectiveStates     --  The objective states (factors) list for each agent.
         """
 
-        self.agents = agents
+        self.agents = ["Alice", "Bob"]
 
         self.gridWidth = gridWidth
         self.gridHeight = gridHeight
 
-        self.states = {i: list(it.product(range(self.gridWidth), range(self.gridHeight))) for i in self.agents}
-        self.actions = {i: [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)] for i in self.agents}
-        self.observations = {i: [False] for i in self.agents}
+        self.state_factor = list(it.product(range(self.gridWidth), range(self.gridHeight)))
+        self.states = list(it.product(self.state_factor, self.state_factor))
 
-        # Note: Like above, this must be a dictionary mapping agents to list of states (not state indexes).
+        self.action_factor = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]
+        self.actions = list(it.product(self.action_factor, self.action_factor))
+
+        self.observation_factor = [False]
+        self.observations = list(it.product(self.observation_factor, self.observation_factor))
+
+        self.successors = dict()
+        self._compute_successors()
+
+        # Note: Like above, this must be a list of agents to list of states (not state indexes).
         self.objectiveStates = objectiveStates
 
+    def _compute_successors(self):
+        """ Compute all the successors of state-action pairs. """
+
+        self.successors = dict()
+
+        for state in self.states:
+            self.successors[state] = dict()
+
+            for action in self.actions:
+                self.successors[state][action] = list()
+
+                for successor in self.states:
+                    if self.T(state, action, successor) > 0.0:
+                        self.successors[state][action] += [successor]
+
     def T(self, state, action, statePrime):
+        """ Compute the state transition probability.
+
+            Parameters:
+                state       --  The state to start.
+                action      --  The action taken in state.
+                statePrime  --  A potential successor state we wish to query for the probability.
+
+            Returns:
+                The probability of successor given state-action pair.
+        """
+
         probability = 1.0
 
         # State transitions are deterministic for successful movement.
-        for i in self.agents:
+        for i in range(len(self.agents)):
             successor = (state[i][0] + action[i][0],
                          state[i][1] + action[i][1])
 
             # Enforce bounds of grid by self-looping at the edges.
-            if (newLocation[0] < 0 or newLocation[1] < 0
-                    or newLocation[0] >= self.gridWidth
-                    or newLocation[1] >= self.gridHeight):
-                if state == statePrime:
-                    return 1.0
+            if (successor[0] < 0 or successor[1] < 0
+                    or successor[0] >= self.gridWidth
+                    or successor[1] >= self.gridHeight):
+                if statePrime[i] == state[i]:
+                    probability *= 1.0
+                    continue
                 else:
                     return 0.0
 
             # Enforce only movement or self-loop are possible.
-            if statePrime != state and successor != statePrime:
+            if statePrime[i] != state[i] and statePrime[i] != successor:
                 return 0.0
 
             # TODO: Currently, this is deterministic. More complex probability calculations go here.
-            if statePrime == successor:
+            if statePrime[i] == successor:
                 probability *= 1.0
             else:
                 probability *= 0.0
 
         return probability
 
-    def O(self, action, state, observation):
+    def O(self, action, successor, observation):
+        """ Compute the probability of an observation given an action-successor pair.
+
+            Parameters:
+                action      --  The action taken.
+                successor   --  The resultant successor.
+                observation --  An observation we wish to query for the probability.
+
+            Returns:
+                The probability of the observation.
+        """
+
         probability = 1.0
 
         # TODO: Make this uncertain maybe.
@@ -89,18 +136,95 @@ class MCC(object):
         return probability
 
     def R0(self, state, action):
+        """ Compute the *group* reward for the state-action pair.
+
+            Parameters:
+                state   --  The state.
+                action  --  The action taken in the state.
+
+            Returns:
+                The *group* reward for the state-action pair.
+        """
+
         # Reward is 1 for no motion when all robots are in the same state.
-        if len(set(state.values())) == 1:
+        if len(set(state)) == 1:
             return 1.0
         return 0.0
 
-    def Ri(self, i, state, action):
+    def Ri(self, agent, state, action):
+        """ Compute the *individual* reward for the state-action pair.
+
+            Parameters:
+                agent   --  The agent name.
+                state   --  The state.
+                action  --  The action taken in the state.
+
+            Returns:
+                The *individual* reward for the state-action pair.
+        """
+
+        agentIndex = self.agents.index(agent)
+
         # Reward is 1 for no motion in a state marked with an individual objective.
-        for i in self.agents:
-            if state[i] not in self.objectiveStates[i]:
-                return 0.0
+        if state[agentIndex] not in self.objectiveStates[agentIndex]:
+            return 0.0
+
         return 1.0
 
+    def get_initial_state(self):
+        """ Return the initial state of the MCC.
+
+            Returns:
+                The initial state (in Si for each agent i) of the MCC.
+        """
+
+        return ((0, int(self.gridHeight / 2)), (self.gridWidth - 1, int(self.gridHeight / 2)))
+
+    def get_successor(self, state, action):
+        """ Return a successor state following T of the MCC.
+
+            Parameters:
+                state   --  A state (in Si for each agent i) of the MCC.
+                action  --  An action (in Si for each agent i) of the MCC.
+
+            Returns:
+                A randomly selected successor state.
+        """
+
+        successor = None
+        current = 0.0
+        target = random.random()
+
+        for iterSuccessor in self.successors[state][action]:
+            current += self.T(state, action, iterSuccessor)
+            if current >= target:
+                successor = iterSuccessor
+                break
+
+        return successor
+
+    def get_observation(self, action, successor):
+        """ Return an observation following O of the MCC.
+
+            Parameters:
+                action      --  An action (in Si for each agent i) of the MCC.
+                successor   --  A successor state (in Si for each agent i) of the MCC.
+
+            Returns:
+                A randomly selected observation.
+        """
+
+        observation = None
+        current = 0.0
+        target = random.random()
+
+        for iterObservation in self.observations:
+            current += self.O(action, successor, iterObservation)
+            if current >= target:
+                observation = iterObservation
+                break
+
+        return observation
 
 if __name__ == "__main__":
     # "Solve" the MCC and save the policies.
