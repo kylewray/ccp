@@ -7,7 +7,8 @@
   <arg name="init_y" default="0.0"/>
   <arg name="init_yaw" default="0.0"/>
 
-  <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="0 0 0 0 0 0 1 /map /$(arg code_name)/odom 50" />
+  <!--  <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="0 0 0 0 0 0 1 /map /$(arg code_name)/odom 50" /> -->
+  <!--  <node pkg="tf" type="static_transform_publisher" name="odom_to_base_footprint" args="0 0 0 0 0 0 1 /$(arg code_name)/odom /$(arg code_name)/base_footprint 50" /> -->
 
 <!--  <include file="$(find kobuki_node)/launch/robot_with_tf.launch" /> -->
   <include file="$(find mcc)/launch/kobuki_full_multiple.launch">

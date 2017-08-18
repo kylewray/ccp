@@ -132,10 +132,6 @@ class MCCKobuki(object):
                                                ModelUpdate,
                                                self.sub_model_update)
 
-        print("*** %s ***" % (rospy.search_param('sub_kobuki_odom')))
-        print("*** %s ***" % (rospy.search_param('pub_kobuki_vel')))
-        print("*** %s ***" % (rospy.search_param('pub_path')))
-
         subKobukiOdomTopic = rospy.get_param(rospy.search_param('sub_kobuki_odom'))
         self.subKobukiOdom = rospy.Subscriber(subKobukiOdomTopic,
                                               Odometry,
