@@ -60,10 +60,10 @@ class MCCSolve(object):
             f.write("set STATES := tl tr bl br;\n")
             f.write("set ACTIONS := none north south east west;\n")
             f.write("set OBSERVATIONS := no_bump bump;\n")
-            f.write("set CONTROLLER_NODES := node1 node2 node3 node4 node5 node6;\n\n\n")
+            f.write("set CONTROLLER_NODES := node1 node2 node3 node4 node5;\n\n\n")
 
             def convertState(stateToConvert):
-                mapping = {(0, 0): "tl", (0, 1): "tr", (1, 0): "bl", (1, 1): "br"}
+                mapping = {(0, 0): "tl", (1, 0): "tr", (0, 1): "bl", (1, 1): "br"}
                 return mapping[stateToConvert]
 
             def convertAction(actionToConvert):
@@ -101,6 +101,12 @@ class MCCSolve(object):
                         if self.mcc.Ri(agent, s, a) != 0.0:
                             f.write("let R%i[\"%s\", \"%s\", \"%s\", \"%s\"] := %.3f;\n" % (i + 1, convertState(s[0]), convertState(s[1]), convertAction(a[0]), convertAction(a[1]), self.mcc.Ri(agent, s, a)))
 
+            for i, agent in enumerate(self.mcc.agents):
+                f.write("\n\n")
+
+                for k, a in enumerate(self.mcc.action_factor):
+                    f.write("let psi%i[\"node%i\", \"%s\"] := %.3f;\n" % (i + 1, k + 1, convertAction(a), 1.0))
+
     def export_Ri(self, agent, delta=5.0):
         """ Solve the MCC from the constructor by exporting a AMPL file.
 
@@ -111,10 +117,12 @@ class MCCSolve(object):
         agentIndex = self.mcc.agents.index(agent)
         otherAgentIndex = abs(agentIndex - 1)
 
-        # First, we read the output text file to get the necessary information to append about V0Star, delta, psi, and eta.
-        output = open("ampl/output.txt", 'r').read().split(" iterations, objective ")[1].split("\n")
-
+        # First, we read the output text file to get the necessary information to append about V0Star.
+        output = open("ampl/output_R0.txt", 'r').read().split(" iterations, objective ")[1].split("\n")
         V0Star = float(output[0])
+
+        # Now we do the same thing but on the other output text file to get the psi_{-i} and eta_{-i} best responses.
+        output = open("ampl/output_Ri_best_response.txt", 'r').read().split(" iterations, objective ")[1].split("\n")
         psiList = list()
         etaList = list()
 

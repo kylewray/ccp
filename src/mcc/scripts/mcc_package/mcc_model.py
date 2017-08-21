@@ -49,6 +49,11 @@ class MCC(object):
         self.observation_factor = [False, True]
         self.observations = list(it.product(self.observation_factor, self.observation_factor))
 
+        self.probabilityOfSuccessfulMove = 1.0
+        #self.probabilityOfSuccessfulMove = 0.7
+        self.probabilityOfBumpWhenMoving = 0.0
+        #self.probabilityOfBumpWhenMoving = 0.2
+
         self.successors = dict()
         self._compute_successors()
 
@@ -111,11 +116,10 @@ class MCC(object):
                 else:
                     return 0.0
             else:
-                probabilityOfSuccessfulMove = 0.9
                 if statePrime[i] == successors[i]:
-                    probability *= probabilityOfSuccessfulMove
+                    probability *= self.probabilityOfSuccessfulMove
                 elif statePrime[i] == state[i]:
-                    probability *= (1.0 - probabilityOfSuccessfulMove)
+                    probability *= (1.0 - self.probabilityOfSuccessfulMove)
                 else:
                     return 0.0
 
@@ -163,13 +167,24 @@ class MCC(object):
                 else:
                     return 0.0
             else:
-                probabilityOfBumpWhenMoving = 0.1
                 if observation[i] == True:
-                    probability *= probabilityOfBumpWhenMoving
+                    probability *= self.probabilityOfBumpWhenMoving
                 else:
-                    probability *= (1.0 - probabilityOfBumpWhenMoving)
+                    probability *= (1.0 - self.probabilityOfBumpWhenMoving)
 
         return probability
+
+    def _agent_distance(self, state):
+        """ Compute the inverse distance each agent is from one another.
+
+            Parameters:
+                state   --  The state.
+
+            Returns:
+                A inverse distance between the two agents.
+        """
+
+        return 2.0 - 1.0 * (abs(state[0][0] - state[1][0]) + abs(state[0][1] - state[1][1]))
 
     def R0(self, state, action):
         """ Compute the *group* reward for the state-action pair.
@@ -182,12 +197,22 @@ class MCC(object):
                 The *group* reward for the state-action pair.
         """
 
-        # Reward is 1 for no motion when all robots are in the same state
-        # and they both chose not to move.
-        if state[0] == state[1]: # and action[0] == (0, 0) and action[1] == (0, 0):
-            return 1.0
+        reward = 0.0
 
-        return 0.0
+        objectiveStates = [(0, 1), (1, 0)]
+
+        # Reward for being as close to each other as possible, as long as
+        # *both* are not in the push box states.
+        if state[0] in objectiveStates or state[1] in objectiveStates:
+            reward += self._agent_distance(state)
+
+        # Movement actions subtract a reward.
+        if action[0] != (0, 0):
+            reward -= 0.1
+        if action[1] != (0, 0):
+            reward -= 0.1
+
+        return reward
 
     def Ri(self, agent, state, action):
         """ Compute the *individual* reward for the state-action pair.
@@ -201,14 +226,27 @@ class MCC(object):
                 The *individual* reward for the state-action pair.
         """
 
+        # The agents still get a reward for begin as close to each other as possible, and
+        # a cost for movement. These rewards are then augmented for individual objectives.
+        #reward = self.R0(state, action)
+
+        reward = 0.0
+
         agentIndex = self.agents.index(agent)
 
-        # Reward is 1 for motion north in a state marked with an individual objective.
-        if (agentIndex == 0 and state[agentIndex] == (0, 0) and action[agentIndex] == (-1, 0)) \
-                and (agentIndex == 1 and state[agentIndex] == (1, 1) and action[agentIndex] == (1, 0)):
-            return 1.0
+        objectiveStates = [(0, 0), (1, 1)]
+        objectiveActions = [(-1, 0), (1, 0)]
 
-        return 0.0
+        # Agent i is rewarded for pushing its box, but requires the other agent to be nearby.
+        if (state[agentIndex] == objectiveStates[agentIndex]
+                and action[agentIndex] == objectiveActions[agentIndex]):
+            reward += self._agent_distance(state)
+
+        # Movement actions subtract a reward.
+        if action[agentIndex] != (0, 0):
+            reward -= 0.1
+
+        return reward
 
     def get_initial_belief(self):
         """ Return the initial belief state of the MCC.
