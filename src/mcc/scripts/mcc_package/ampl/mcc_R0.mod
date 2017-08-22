@@ -25,14 +25,10 @@ param R2 {s1 in STATES, s2 in STATES, a1 in ACTIONS, a2 in ACTIONS} default 0.0;
 param gamma default 0.95, >= 0.0, <= 1.0;
 
 
-param psi1 {CONTROLLER_NODES, ACTIONS} default 0.0, >= 0.0, <= 1.0;
-param psi2 {CONTROLLER_NODES, ACTIONS} default 0.0, >= 0.0, <= 1.0;
-
-
 var V0 {CONTROLLER_NODES, CONTROLLER_NODES, STATES, STATES};
-#var psi1 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
+var psi1 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
 var eta1 {CONTROLLER_NODES, ACTIONS, OBSERVATIONS, CONTROLLER_NODES} >= 0.0, <= 1.0;
-#var psi2 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
+var psi2 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
 var eta2 {CONTROLLER_NODES, ACTIONS, OBSERVATIONS, CONTROLLER_NODES} >= 0.0, <= 1.0;
 
 
@@ -51,11 +47,11 @@ subject to Bellman_Constraint_V0 {q1 in CONTROLLER_NODES, q2 in CONTROLLER_NODES
 
 # Probability Constraints - Agent 1.
 
-#subject to Probability_Constraint_Psi1_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
-#  psi1[q, a] >= 0.0;
+subject to Probability_Constraint_Psi1_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
+  psi1[q, a] >= 0.0;
 
-#subject to Probability_Constraint_Psi1_Normalization {q in CONTROLLER_NODES}:
-#  sum {a in ACTIONS} psi1[q, a] = 1.0;
+subject to Probability_Constraint_Psi1_Normalization {q in CONTROLLER_NODES}:
+  sum {a in ACTIONS} psi1[q, a] = 1.0;
 
 subject to Probability_Constraint_Eta1_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS, o in OBSERVATIONS, qp in CONTROLLER_NODES}:
   eta1[q, a, o, qp] >= 0.0;
@@ -66,11 +62,11 @@ subject to Probability_Constraint_Eta1_Normalization {q in CONTROLLER_NODES, a i
 
 # Probability Constraints - Agent 2.
 
-#subject to Probability_Constraint_Psi2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
-#  psi2[q, a] >= 0.0;
+subject to Probability_Constraint_Psi2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
+  psi2[q, a] >= 0.0;
 
-#subject to Probability_Constraint_Psi2_Normalization {q in CONTROLLER_NODES}:
-#  sum {a in ACTIONS} psi2[q, a] = 1.0;
+subject to Probability_Constraint_Psi2_Normalization {q in CONTROLLER_NODES}:
+  sum {a in ACTIONS} psi2[q, a] = 1.0;
 
 subject to Probability_Constraint_Eta2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS, o in OBSERVATIONS, qp in CONTROLLER_NODES}:
   eta2[q, a, o, qp] >= 0.0;

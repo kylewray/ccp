@@ -46,7 +46,8 @@ class FSC(object):
         self.agent = agent
         self.n = n
 
-        self.Q = ["%s FSC State %i" % (self.agent, s) for s in range(self.n)]
+        #self.Q = ["%s FSC State %i" % (self.agent, s) for s in range(self.n)]
+        self.Q = ["node%i" % (s + 1) for s in range(self.n)]
         self.psi = {q: {a: 1.0 / len(mcc.action_factor) for a in mcc.action_factor} \
                     for q in self.Q}
         self.eta = {q: {a: {o: {qp: 1.0 / len(self.Q) for qp in self.Q} \
@@ -109,8 +110,12 @@ class FSC(object):
 
         return successor
 
-    def save(self):
-        """ Convert this to a JSON-like format and save it to the policy folder. """
+    def save(self, filePrefix=""):
+        """ Convert this to a JSON-like format and save it to the policy folder.
+
+            Parameters:
+                filePrefix  --  Optionally specify a prefix for the FSC files.
+        """
 
         data = {'agent': self.agent,
                 'n': self.n,
@@ -118,15 +123,19 @@ class FSC(object):
                 'psi': self.psi,
                 'eta': self.eta}
         
-        with open(os.path.join(thisFilePath, "policies", "%s.fsc" % (self.agent)), 'wb') as f:
+        with open(os.path.join(thisFilePath, "policies", "%s_%s.fsc" % (filePrefix, self.agent)), 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
-    def load(self):
-        """ Load the policy from the policy folder. """
+    def load(self, filePrefix=""):
+        """ Load the policy from the policy folder.
+
+            Parameters:
+                filePrefix  --  Optionally specify a prefix for the FSC files.
+        """
 
         data = None
 
-        with open(os.path.join(thisFilePath, "policies", "%s.fsc" % (self.agent)), 'rb') as f:
+        with open(os.path.join(thisFilePath, "policies", "%s_%s.fsc" % (filePrefix, self.agent)), 'rb') as f:
             data = pickle.load(f)
 
         self.agent = data['agent']

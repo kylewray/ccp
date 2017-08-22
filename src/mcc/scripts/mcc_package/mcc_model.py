@@ -256,8 +256,10 @@ class MCC(object):
                 to the probability, of the MCC.
         """
 
-        return {((0, int(self.gridHeight / 2)),
-                 (self.gridWidth - 1, int(self.gridHeight / 2))): 1.0}
+        return {((0, 1), (1, 0)): 1.0}
+
+        #return {((0, int(self.gridHeight / 2)),
+        #         (self.gridWidth - 1, int(self.gridHeight / 2))): 1.0}
 
     def get_successor(self, state, action):
         """ Return a successor state following T of the MCC.

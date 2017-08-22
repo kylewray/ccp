@@ -4,7 +4,7 @@ data;
 set STATES := tl tr bl br;
 set ACTIONS := none north south east west;
 set OBSERVATIONS := no_bump bump;
-set CONTROLLER_NODES := node1 node2 node3 node4 node5;
+set CONTROLLER_NODES := node1 node2 node3 node4 node5 node6;
 
 
 let T["tl", "tl", "none", "none", "tl", "tl"] := 1.000;
@@ -1849,17 +1849,3 @@ let R2["br", "br", "north", "east"] := 1.900;
 let R2["br", "br", "north", "west"] := -0.100;
 let R2["br", "br", "north", "south"] := -0.100;
 let R2["br", "br", "north", "north"] := -0.100;
-
-
-let psi1["node1", "none"] := 1.000;
-let psi1["node2", "east"] := 1.000;
-let psi1["node3", "west"] := 1.000;
-let psi1["node4", "south"] := 1.000;
-let psi1["node5", "north"] := 1.000;
-
-
-let psi2["node1", "none"] := 1.000;
-let psi2["node2", "east"] := 1.000;
-let psi2["node3", "west"] := 1.000;
-let psi2["node4", "south"] := 1.000;
-let psi2["node5", "north"] := 1.000;

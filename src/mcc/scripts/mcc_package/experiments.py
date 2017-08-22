@@ -22,11 +22,12 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from mcc_model import *
-from fsc import *
-
 import pylab
 import numpy as np
+
+from mcc_model import *
+from fsc import *
+from fsc_vector import *
 
 
 class Experiments(object):
@@ -35,101 +36,124 @@ class Experiments(object):
     def __init__(self):
         """ The constructor for the Experiments class. """
 
-        self.numTrials = 10
-        self.horizon = 30
+        self.numTrials = 100
+        self.horizon = 50
 
-        self.slackValues = [0.0, 1.0, 2.0, 3.0]
+        self.numControllerNodes = [2, 4, 6]
+        self.slackValues = [0.0, 10.0, 20.0, 30.0]
 
     def start(self):
         """ Start the experiments and graph the result at the end. """
 
-        values = [list(), list(), list()]
-        standardError = [list(), list(), list()]
+        for numNodes in self.numControllerNodes:
+            values = [list(), list(), list()]
+            standardError = [list(), list(), list()]
 
-        # For each slack term, create the MCC, solve it, and compute the value.
-        for slack in self.slackValues:
-            # Create the MCC and solve it.
-            mcc = MCC(objectiveStates=[[(0, 0)], [(2, 2)]])
+            # For each slack term, create the MCC, solve it, and compute the value.
+            for slack in self.slackValues:
+                # Create the MCC, FSCs, etc.
+                mcc = MCC()
 
-            # TODO: Solve...
-            aliceFSC = FSC(mcc, "Alice")
-            bobFSC = FSC(mcc, "Bob")
+                aliceFSC = FSC(mcc, "Alice", numNodes)
+                bobFSC = FSC(mcc, "Bob", numNodes)
+                fscVector = FSCVector([aliceFSC, bobFSC])
 
-            # Compute the average value following this FSC policy.
-            data = [list(), list(), list()]
-            averages = np.array([0.0, 0.0, 0.0])
+                aliceFSC.load("%i_%i" % (numNodes, int(slack)))
+                bobFSC.load("%i_%i" % (numNodes, int(slack)))
 
-            for i in range(self.numTrials):
-                state = mcc.get_initial_state()
-                aliceState = aliceFSC.get_initial_state()
-                bobState = bobFSC.get_initial_state()
+                # Compute the average value following this FSC policy.
+                data = [list(), list(), list()]
+                averages = np.array([0.0, 0.0, 0.0])
 
-                trialValues = [0.0, 0.0, 0.0]
+                for i in range(self.numTrials):
+                    belief = mcc.get_initial_belief()
+                    state = None
 
-                for t in range(self.horizon):
-                    action = (aliceFSC.get_action(aliceState), bobFSC.get_action(bobState))
+                    currentValue = 0.0
+                    targetValue = random.random()
+                    for s in mcc.states:
+                        try:
+                            currentValue += belief[s]
+                            if currentValue >= targetValue:
+                                state = s
+                                break
+                        except:
+                            continue
 
-                    trialValues[0] += mcc.R0(state, action)
-                    trialValues[1] += mcc.Ri("Alice", state, action)
-                    trialValues[2] += mcc.Ri("Bob", state, action)
+                    aliceState = aliceFSC.get_initial_state()
+                    bobState = bobFSC.get_initial_state()
 
-                    successor = mcc.get_successor(state, action)
-                    observation = mcc.get_observation(action, successor)
+                    trialValues = [0.0, 0.0, 0.0]
 
-                    state = successor
-                    aliceState = aliceFSC.get_successor(aliceState, action[0], observation[0])
-                    bobState = bobFSC.get_successor(bobState, action[1], observation[1])
+                    for t in range(self.horizon):
+                        action = (aliceFSC.get_action(aliceState), bobFSC.get_action(bobState))
 
-                for j in range(len(averages)):
-                    data[j] += [trialValues[j]]
-                    averages[j] = float(i * averages[j] + trialValues[j]) / float(i + 1.0)
+                        trialValues[0] += mcc.R0(state, action)
+                        trialValues[1] += mcc.Ri("Alice", state, action)
+                        trialValues[2] += mcc.Ri("Bob", state, action)
 
-            # Record the value and compute standard error.
+                        successor = mcc.get_successor(state, action)
+                        observation = mcc.get_observation(action, successor)
+
+                        state = successor
+                        aliceState = aliceFSC.get_successor(aliceState, action[0], observation[0])
+                        bobState = bobFSC.get_successor(bobState, action[1], observation[1])
+
+                    for j in range(len(averages)):
+                        data[j] += [trialValues[j]]
+                        averages[j] = float(i * averages[j] + trialValues[j]) / float(i + 1.0)
+
+                # Record the value and compute standard error.
+                for i in range(len(values)):
+                    values[i] += [averages[i]]
+                    standardError[i] += [math.sqrt(sum([pow(data[i][j] - averages[i], 2) for j in range(len(data[i]))]) / float(len(data[i]) - 1.0))]
+
+            # Compute some final things and make adjustments.
             for i in range(len(values)):
-                values[i] += [averages[i]]
-                standardError[i] += [math.sqrt(sum([pow(data[i][j] - averages[i], 2) for j in range(len(data[i]))]) / float(len(data[i]) - 1.0))]
+                values[i] = np.array(values[i])
 
-        # Compute some final things and make adjustments.
-        for i in range(len(values)):
-            values[i] = np.array(values[i])
+            minV = min([min(v) for v in values])
+            maxV = max([max(v) for v in values])
 
-        minV = min([min(v) for v in values])
-        maxV = max([max(v) for v in values])
+            # Plot the result, providing beautiful paper-worthy labels.
+            labels = ["V0", "V1", "V2"]
+            linestyles = ["-", "--", ":"]
+            markers = ["o", "s", "^"]
+            colors = ["r", "g", "b"]
 
-        # Plot the result, providing beautiful paper-worthy labels.
-        labels = ["V0", "V1", "V2"]
-        linestyles = ["-", "--", ":"]
-        markers = ["o", "s", "^"]
-        colors = ["r", "g", "b"]
+            minSlack = min(self.slackValues)
+            maxSlack = max(self.slackValues)
 
-        minSlack = min(self.slackValues)
-        maxSlack = max(self.slackValues)
+            pylab.title("Average Discounted Reward vs. Slack")
+            pylab.hold(True)
 
-        pylab.title("Average Discounted Reward vs. Slack")
-        pylab.hold(True)
+            pylab.xlabel("Slack")
+            pylab.xticks(np.arange(minSlack, maxSlack + 1.0, 10.0))
+            pylab.xlim([minSlack - 0.1, maxSlack + 0.1])
 
-        pylab.xlabel("Slack")
-        pylab.xticks(np.arange(minSlack, maxSlack + 1.0, 1.0))
-        pylab.xlim([minSlack - 0.1, maxSlack + 0.1])
+            pylab.ylabel("Average Discounted Reward")
+            pylab.yticks(np.arange(-0.5, int(maxV) + 6.5, 5.5))
+            #pylab.ylim([-0.1, int(maxV) + 1.1])
 
-        pylab.ylabel("Average Discounted Reward")
-        pylab.yticks(np.arange(-0.5, int(maxV) + 1.5, 0.5))
-        pylab.ylim([-0.1, int(maxV) + 1.1])
+            pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 1.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
 
-        pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 1.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
+            for i in range(len(values)):
+                pylab.errorbar(self.slackValues, values[i],
+                            yerr=standardError[i],
+                            linestyle=linestyles[i], linewidth=1,
+                            marker=markers[i], markersize=14,
+                            color=colors[i])
+                pylab.plot(self.slackValues, values[i],
+                            label=labels[i],
+                            linestyle=linestyles[i], linewidth=4,
+                            marker=markers[i], markersize=14,
+                            color=colors[i])
 
-        for i in range(len(values)):
-            pylab.errorbar(self.slackValues, values[i],
-                        yerr=standardError[i],
-                        linestyle=linestyles[i], linewidth=1,
-                        marker=markers[i], markersize=14,
-                        color=colors[i])
-            pylab.plot(self.slackValues, values[i],
-                        label=labels[i],
-                        linestyle=linestyles[i], linewidth=4,
-                        marker=markers[i], markersize=14,
-                        color=colors[i])
+            pylab.legend(loc=4)
+            pylab.show()
 
-        pylab.legend(loc=4)
-        pylab.show()
+
+if __name__ == "__main__":
+    experiments = Experiments()
+    experiments.start()
 

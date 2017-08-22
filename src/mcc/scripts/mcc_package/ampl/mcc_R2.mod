@@ -30,12 +30,10 @@ param V0Star default 0.0;
 param psi1 {CONTROLLER_NODES, ACTIONS} default 0.0, >= 0.0, <= 1.0;
 param eta1 {CONTROLLER_NODES, ACTIONS, OBSERVATIONS, CONTROLLER_NODES} default 0.0, >= 0.0, <= 1.0;
 
-param psi2 {CONTROLLER_NODES, ACTIONS} default 0.0, >= 0.0, <= 1.0;
-
 
 var V0 {CONTROLLER_NODES, CONTROLLER_NODES, STATES, STATES};
 var V2 {CONTROLLER_NODES, CONTROLLER_NODES, STATES, STATES};
-#var psi2 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
+var psi2 {CONTROLLER_NODES, ACTIONS} >= 0.0, <= 1.0;
 var eta2 {CONTROLLER_NODES, ACTIONS, OBSERVATIONS, CONTROLLER_NODES} >= 0.0, <= 1.0;
 
 
@@ -62,11 +60,11 @@ subject to Slack_Constraint:
 
 # Probability Constraints - Agent 1.
 
-#subject to Probability_Constraint_Psi2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
-#  psi2[q, a] >= 0.0;
+subject to Probability_Constraint_Psi2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS}:
+  psi2[q, a] >= 0.0;
 
-#subject to Probability_Constraint_Psi2_Normalization {q in CONTROLLER_NODES}:
-#  sum {a in ACTIONS} psi2[q, a] = 1.0;
+subject to Probability_Constraint_Psi2_Normalization {q in CONTROLLER_NODES}:
+  sum {a in ACTIONS} psi2[q, a] = 1.0;
 
 subject to Probability_Constraint_Eta2_Nonnegative {q in CONTROLLER_NODES, a in ACTIONS, o in OBSERVATIONS, qp in CONTROLLER_NODES}:
   eta2[q, a, o, qp] >= 0.0;
