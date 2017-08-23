@@ -49,10 +49,12 @@ class MCC(object):
         self.observation_factor = [False, True]
         self.observations = list(it.product(self.observation_factor, self.observation_factor))
 
-        self.probabilityOfSuccessfulMove = 1.0
-        #self.probabilityOfSuccessfulMove = 0.7
-        self.probabilityOfBumpWhenMoving = 0.0
-        #self.probabilityOfBumpWhenMoving = 0.2
+        #self.probabilityOfSuccessfulMove = 1.0
+        self.probabilityOfSuccessfulMove = 0.8
+        #self.probabilityOfSliding = 0.0
+        self.probabilityOfSliding = 0.1
+        #self.probabilityOfBumpWhenMoving = 0.0
+        self.probabilityOfBumpWhenMoving = 0.1
 
         self.successors = dict()
         self._compute_successors()
@@ -99,8 +101,15 @@ class MCC(object):
             if (successors[i][0] < 0 or successors[i][1] < 0
                     or successors[i][0] >= self.gridWidth
                     or successors[i][1] >= self.gridHeight):
+                # Self-loop. Note: The if-statement above forces all of these to be for movement actions only.
                 if statePrime[i] == state[i]:
-                    probability *= 1.0
+                    probability *= 1.0 - self.probabilityOfSliding
+                # If you tried to move on the x-axis, then sliding happens on the y-axis.
+                elif action[i][0] != 0 and statePrime[i][0] == state[i][0] and statePrime[i][1] != state[i][1]:
+                    probability *= self.probabilityOfSliding
+                # If you tried to move on the y-axis, then sliding happens on the x-axis.
+                elif action[i][1] != 0 and statePrime[i][0] != state[i][0] and statePrime[i][1] == state[i][1]:
+                    probability *= self.probabilityOfSliding
                 else:
                     return 0.0
 
@@ -116,10 +125,19 @@ class MCC(object):
                 else:
                     return 0.0
             else:
+                # Move forward to the desired successor subtracting the probability to sliding.
+                # Note: Again, being here only happens if the agent moved...
                 if statePrime[i] == successors[i]:
                     probability *= self.probabilityOfSuccessfulMove
+                # Self-loop with the inverse probability.
                 elif statePrime[i] == state[i]:
-                    probability *= (1.0 - self.probabilityOfSuccessfulMove)
+                    probability *= (1.0 - self.probabilityOfSuccessfulMove - self.probabilityOfSliding)
+                # If you tried to move on the x-axis, then sliding happens on the y-axis.
+                elif action[i][0] != 0 and statePrime[i][0] == state[i][0] and statePrime[i][1] != state[i][1]:
+                    probability *= self.probabilityOfSliding
+                # If you tried to move on the y-axis, then sliding happens on the x-axis.
+                elif action[i][1] != 0 and statePrime[i][0] != state[i][0] and statePrime[i][1] == state[i][1]:
+                    probability *= self.probabilityOfSliding
                 else:
                     return 0.0
 
@@ -233,14 +251,34 @@ class MCC(object):
         reward = 0.0
 
         agentIndex = self.agents.index(agent)
+        otherAgentIndex = abs(agentIndex - 1)
 
         objectiveStates = [(0, 0), (1, 1)]
         objectiveActions = [(-1, 0), (1, 0)]
 
+        # ----- Prisoner's Dilemma -----
+        agentPushesBox = (state[agentIndex] == objectiveStates[agentIndex]
+                and action[agentIndex] == objectiveActions[agentIndex])
+        otherAgentPushesBox = (state[otherAgentIndex] == objectiveStates[otherAgentIndex]
+                and action[otherAgentIndex] == objectiveActions[otherAgentIndex])
+
+        # Note: Cooperate = Not Push, Defect = Push
+        if agentPushesBox and otherAgentPushesBox:
+            reward += 1.0
+        elif agentPushesBox and not otherAgentPushesBox:
+            reward += 3.0
+        elif not agentPushesBox and otherAgentPushesBox:
+            reward += 0.0
+        elif not agentPushesBox and not otherAgentPushesBox:
+            reward += 2.0
+        # -------------------------------
+
+        # ----- Battle of the Sexes -----
         # Agent i is rewarded for pushing its box, but requires the other agent to be nearby.
-        if (state[agentIndex] == objectiveStates[agentIndex]
-                and action[agentIndex] == objectiveActions[agentIndex]):
-            reward += self._agent_distance(state)
+        #if (state[agentIndex] == objectiveStates[agentIndex]
+        #        and action[agentIndex] == objectiveActions[agentIndex]):
+        #    reward += self._agent_distance(state)
+        # -------------------------------
 
         # Movement actions subtract a reward.
         if action[agentIndex] != (0, 0):

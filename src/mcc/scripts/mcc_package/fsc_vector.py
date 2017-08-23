@@ -140,7 +140,7 @@ class FSCVector(object):
 
             value = 0.0
             if param[0:3] == "psi" or param[0:3] == "eta":
-                value = max(0.0, min(1.0, float(line[3])))
+                value = max(0.0, min(1.0, float(line[3][:-1])))
 
             if param[0:3] == "psi":
                 psi = ast.literal_eval(param[4:])

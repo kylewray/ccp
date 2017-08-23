@@ -24,6 +24,7 @@
 
 import sys
 import time
+import timeit
 import os.path
 
 import xmlrpc.server
@@ -52,13 +53,17 @@ class MCCSolve(object):
         self.delta = delta
         self.numSteps = numSteps
 
+        # This handles the rounding errors when reading the output text file.
+        self.allowableErrorForNLPSolversV0Star = 0.25
+
         self.neos = None
 
-    def _export_R0(self, filenameIndex=0):
+    def _export_R0(self, filenameIndex=0, filename=None):
         """ Solve the MCC from the constructor by exporting a AMPL file.
 
             Parameters:
                 filenameIndex       --  The desired filename index for the exported AMPL file.
+                filename            --  Instead, optionally, the user can just set the filename.
         """
 
         # TODO: If you want, in the future, you can set these too in the data file.
@@ -66,7 +71,10 @@ class MCCSolve(object):
         #qVector0 = self.fscVector.get_initial_state_vector()
         #qVector0Index = self.fscVector.QVector.index(qVector0)
 
-        with open("ampl/mcc_R%i.dat" % (filenameIndex), 'w') as f:
+        if filename is None:
+            filename = "ampl/mcc_R%i.dat" % (filenameIndex)
+
+        with open(filename, 'w') as f:
             f.write("data;\n\n\n")
 
             controllerNodes = " ".join(["node%i" % (i + 1) for i in range(self.numControllerNodes)])
@@ -118,10 +126,10 @@ class MCCSolve(object):
 
         # First, we read the output text file to get the necessary information to append about V0Star.
         output = open("ampl/mcc_R0.output", 'r').read().split(" iterations, objective ")[1].split("\n")
-        V0Star = float(output[0])
+        V0Star = float(output[0]) - self.allowableErrorForNLPSolversV0Star
 
         # Now we do the same thing but on the other output text file to get the psi_{-i} and eta_{-i} best responses.
-        output = open("ampl/mcc_R%i.output" % (agentIndex + 1), 'r').read().split(" iterations, objective ")[1].split("\n")
+        output = open("ampl/mcc_R%i.output" % (otherAgentIndex + 1), 'r').read().split(" iterations, objective ")[1].split("\n")
         psiList = list()
         etaList = list()
 
@@ -159,6 +167,46 @@ class MCCSolve(object):
             for eta in etaList:
                 f.write(eta)
 
+    def _export_compute_final(self):
+        """ Export an AMPL file for computing V0, V1, and V2. """
+
+        # First, we export the final data file using R0 as a base.
+        outputFilename = "ampl/mcc_compute_final.dat"
+        self._export_R0(filename=outputFilename)
+
+        # Now, we open each of the agents' output files and load their policies.
+        for agentIndex in range(len(self.mcc.agents)):
+            output = open("ampl/mcc_R%i.output" % (agentIndex + 1), 'r').read().split(" iterations, objective ")[1].split("\n")
+            psiList = list()
+            etaList = list()
+
+            counter = 3
+            line = ""
+
+            while counter < len(output):
+                line = list(filter(lambda x: x != "", output[counter].split(" ")))
+                if line[0] == ";":
+                    break
+
+                param = line[1][1:-1]
+                value = max(0.0, min(1.0, float(line[2])))
+
+                if param[0:4] == "psi%i" % (agentIndex + 1):
+                    psiList += ["let %s := %.5f;\n" % (param, value)]
+                elif param[0:4] == "eta%i" % (agentIndex + 1):
+                    etaList += ["let %s := %.5f;\n" % (param, value)]
+
+                counter += 1
+
+            with open(outputFilename, 'a') as f:
+                f.write("\n\n")
+                for psi in psiList:
+                    f.write(psi)
+
+                f.write("\n\n")
+                for eta in etaList:
+                    f.write(eta)
+
     def _connect_to_neos(self):
         """ Connect to NEOS and verify that things are working. """
 
@@ -175,7 +223,7 @@ class MCCSolve(object):
         """ Submit a job to NEOS server to solves the group or individual objective once.
 
             Parameters:
-                objectiveIndex      --  The desired objective to solve.
+                objectiveIndex      --  The desired objective to solve. If None, then compute final values.
                 username            --  The username for NEOS server.
                 password            --  The password for NEOS server.
 
@@ -184,15 +232,22 @@ class MCCSolve(object):
         """
 
         # Export the data file if necessary.
-        if objectiveIndex == 0:
+        if objectiveIndex is None:
+            self._export_compute_final()
+        elif objectiveIndex == 0:
             self._export_R0(0)
         else:
             self._export_Ri(objectiveIndex - 1)
 
         # Load the model, data, and commands files.
-        model = open("ampl/mcc_R%i.mod" % (objectiveIndex)).read()
-        data = open("ampl/mcc_R%i.dat" % (objectiveIndex)).read()
-        commands = open("ampl/mcc.cmd").read()
+        if objectiveIndex is None:
+            model = open("ampl/mcc_compute_final.mod").read()
+            data = open("ampl/mcc_compute_final.dat").read()
+            commands = open("ampl/mcc.cmd").read()
+        else:
+            model = open("ampl/mcc_R%i.mod" % (objectiveIndex)).read()
+            data = open("ampl/mcc_R%i.dat" % (objectiveIndex)).read()
+            commands = open("ampl/mcc.cmd").read()
 
         # Construct the XML string for the job submission.
         xmlString = "<document>\n"
@@ -210,7 +265,10 @@ class MCCSolve(object):
             print("Failed to submit job, probably because there have too many.")
             raise Exception()
 
-        print("Submitted job %i. Solving for objective function %i." % (jobNumber, objectiveIndex), end='')
+        if objectiveIndex is None:
+            print("Submitted job %i. Solving for the values of the final objective function.", end='')
+        else:
+            print("Submitted job %i. Solving for objective function %i." % (jobNumber, objectiveIndex), end='')
         sys.stdout.flush()
 
         # Continuously check if the job is done. Note: The getIntermediateResults function will
@@ -221,7 +279,7 @@ class MCCSolve(object):
         while status != "Done":
             status = self.neos.getJobStatus(jobNumber, jobPassword)
 
-            time.sleep(5)
+            time.sleep(1)
 
             print('.', end='')
             sys.stdout.flush()
@@ -233,35 +291,37 @@ class MCCSolve(object):
 
         return result
 
-    def solve(self, username, password):
+    def solve(self, username, password, resolve=True):
         """ Solve the MCC by submitting to NEOS server and doing best response a few times.
 
             Parameters:
                 username    --  The username for NEOS server.
                 password    --  The password for NEOS server.
+                resolve     --  If the group objective should be resolved or not.
+
+            Returns:
+                totalTime    --  The time it took to compute the entire result.
+                individualTimes --  A 3-vector (R0, R1, R2) of times to compute each result.
         """
+
+        totalTic = timeit.default_timer()
+        totalToc = 0.0
+        individualTic = [0.0, list(), list()]
+        individualToc = [0.0, list(), list()]
 
         self._connect_to_neos()
 
-        solveGroupObjective = True
-
-        # Special: Do not waste time if we already solved the group objective.
-        if os.path.isfile("ampl/mcc_R0.output"):
-            answer = " "
-            while answer not in ['', 'y', 'n']:
-                print("Group objective solution has already been computed! Recompute it (y/N)?")
-                answer = input()
-            solveGroupObjective = (answer == 'y')
-
         # First, if desired, submit a job to solve R0. Save the result to an output file.
         result = ""
-
-        if solveGroupObjective:
+        if resolve:
             print("Solving Group Objective.")
+
+            individualTic[0] = timeit.default_timer()
             result = self._submit(0, username, password)
+            individualToc[0] = timeit.default_timer()
+
             with open("ampl/mcc_R0.output", "w") as f:
                 f.write(result)
-
         # Otherwise, we need to reset the best response outputs, so load the R0 output.
         else:
             with open("ampl/mcc_R0.output", "r") as f:
@@ -286,7 +346,10 @@ class MCCSolve(object):
         for i in range(self.numSteps):
             for agentIndex in range(len(self.mcc.agents)):
                 print("Step %i of %i - Agent %i of %i" % (i + 1, self.numSteps, agentIndex + 1, len(self.mcc.agents)))
+
+                individualTic[agentIndex + 1] += [timeit.default_timer()]
                 result = self._submit(agentIndex + 1, username, password)
+                individualToc[agentIndex + 1] += [timeit.default_timer()]
 
                 with open("ampl/mcc_R%i.output" % (agentIndex + 1), "w") as f:
                     f.write(result)
@@ -294,30 +357,49 @@ class MCCSolve(object):
                 # Two Things: First, output the objective value. Second, check if it even computed one!
                 try:
                     objectiveValues[agentIndex + 1] = float(result.split(" iterations, objective ")[1].split("\n")[0])
+                    finalPolicyAgentIndex = agentIndex
                     print("Individual Objective %i Value: %.5f" % (agentIndex + 1, objectiveValues[agentIndex + 1]))
                 except IndexError:
                     print("Failed to solve the problem at this step... Terminated.")
                     done = True
                     break
-
-                finalPolicyAgentIndex = agentIndex
             if done:
                 break
 
+        # Compute and record timings.
+        totalToc = timeit.default_timer()
+        totalTime = totalToc - totalTic
+
+        individualTimes = [individualToc[0] - individualTic[0], list(), list()]
+        for i in range(1, 3):
+            individualTime = 0.0
+            for j in range(len(individualToc[i])):
+                individualTime = (float(j) * individualTime + individualToc[i][j] - individualTic[i][j]) / float(j + 1)
+            individualTimes[i] = individualTime
+
         # Load the FSC policies from the output and data files. Then, we save the FSCs!
-        fscVector.load_from_output_file(self.mcc, finalPolicyAgentIndex, "ampl/mcc_R%i.output" % (finalPolicyAgentIndex + 1))
-        fscVector.load_from_data_file(self.mcc, abs(finalPolicyAgentIndex - 1), "ampl/mcc_R%i.dat" % (abs(finalPolicyAgentIndex - 1) + 1))
-        fscVector.save(self.numControllerNodes, self.delta)
+        self.fscVector.load_from_output_file(self.mcc, finalPolicyAgentIndex, "ampl/mcc_R%i.output" % (finalPolicyAgentIndex + 1))
+        self.fscVector.load_from_data_file(self.mcc, abs(finalPolicyAgentIndex - 1), "ampl/mcc_R%i.dat" % (finalPolicyAgentIndex + 1))
+        self.fscVector.save(self.numControllerNodes, self.delta)
+
+        # One last step! Compute the values of these policies.
+        print("Computing the actual values of each objective under this policy.")
+        result = self._submit(None, username, password)
+        with open("ampl/mcc_compute_final.output", "w") as f:
+            f.write(result)
 
         print("Completed. Final Objective Values: ", objectiveValues)
 
+        return totalTime, individualTimes
 
 if __name__ == "__main__":
     if len(sys.argv) == 6:
         mcc = MCC()
         fscVector = FSCVector([FSC(mcc, agent, int(sys.argv[3])) for agent in mcc.agents])
         mccSolve = MCCSolve(mcc, fscVector, numSteps=int(sys.argv[4]), delta=float(sys.argv[5]))
-        mccSolve.solve(sys.argv[1], sys.argv[2])
+        totalTime, individualTimes = mccSolve.solve(sys.argv[1], sys.argv[2])
+        print("Individual Times: [R0: %.2fs, R1: %.2fs, R2: %.2fs]" % (individualTimes[0], individualTimes[1], individualTimes[2]))
+        print("Total Time: %.2f seconds" % (totalTime))
     else:
         print("Format: python3 mcc_solve.py <username> <password> <num controller nodes> <num BR iterations> <slack>")
 
