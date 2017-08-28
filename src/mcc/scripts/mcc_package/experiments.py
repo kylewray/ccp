@@ -40,10 +40,10 @@ class Experiments(object):
         self.numTrials = 10000
         self.horizon = 100
 
-        self.numSteps = 10
+        self.maxNumSteps = 50
 
-        self.numControllerNodes = [2, 4, 6]
-        self.slackValues = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0]
+        self.numControllerNodes = [6]
+        self.slackValues = [20.0, 25.0] %[0.0, 5.0, 10.0, 15.0, 20.0, 25.0]
 
     def _compute_final_values(self):
         """ Load the 'ampl/mcc_compute_final.output' file and compute the final values.
@@ -76,13 +76,14 @@ class Experiments(object):
 
         return result
 
-    def start(self, solve=True, username="", password=""):
+    def start(self, solve=True, username="", password="", gameType="Prisoner's Dilemma"):
         """ Start the experiments and graph the result at the end.
 
             Parameters:
                 solve       --  True if we should solve the policies here. False if we should instead load them.
                 username    --  The NEOS server username.
                 password    --  The NEOS server password.
+                gameType    --  The type of game: "Prisoner's Dilemma" or "Battle of the Sexes".
         """
 
         for numNodes in self.numControllerNodes:
@@ -96,7 +97,7 @@ class Experiments(object):
                 print("----- Starting Configuration [Num Nodes: %i, Slack %.1f] -----" % (numNodes, slack))
 
                 # Create the MCC, FSCs, etc. Then solve the MCC. Then load the policies.
-                mcc = MCC()
+                mcc = MCC(gameType)
 
                 aliceFSC = FSC(mcc, "Alice", numNodes)
                 bobFSC = FSC(mcc, "Bob", numNodes)
@@ -104,8 +105,8 @@ class Experiments(object):
 
                 if solve:
                     # Note: This overwrites the FSCs and re-saves them for later use, if you want.
-                    mccSolve = MCCSolve(mcc, fscVector, numSteps=self.numSteps, delta=slack)
-                    totalTime, individualTimes = mccSolve.solve(username, password, resolve=(slack == 0.0))
+                    mccSolve = MCCSolve(mcc, fscVector, maxNumSteps=self.maxNumSteps, delta=slack)
+                    totalTime, individualTimes = mccSolve.solve(username, password, resolve=(slack == self.slackValues[0]))
 
                     print("Individual Times: [R0: %.2fs, R1: %.2fs, R2: %.2fs]" % (individualTimes[0], individualTimes[1], individualTimes[2]))
                     print("Total Time: %.2f seconds" % (totalTime))
@@ -193,14 +194,14 @@ class Experiments(object):
             pylab.hold(True)
 
             pylab.xlabel("Slack")
-            pylab.xticks(np.arange(minSlack, maxSlack + 1.0, 5.0))
+            pylab.xticks(np.arange(minSlack, maxSlack + 5.0, 5.0))
             pylab.xlim([minSlack - 0.1, maxSlack + 0.1])
 
             pylab.ylabel("Average Discounted Reward")
-            pylab.yticks(np.arange(-1.0, int(maxV) + 6, 5))
-            #pylab.ylim([-0.1, int(maxV) + 1.1])
+            pylab.yticks(np.arange(int(minV), int(maxV) + 5.0, 5.0))
+            pylab.ylim([minV - 0.1, int(maxV) + 1.1])
 
-            pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 1.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
+            pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
 
             for i in range(len(values)):
                 pylab.errorbar(self.slackValues, values[i],
@@ -214,7 +215,8 @@ class Experiments(object):
                             marker=markers[i], markersize=14,
                             color=colors[i])
 
-            pylab.legend(loc=4)
+            pylab.legend(loc=1) # Upper Right
+            #pylab.legend(loc=3) # Lower Left
             pylab.show()
 
             # Special: If we just solved for these, then we have the actual values! Plot these results too!
@@ -231,14 +233,14 @@ class Experiments(object):
                 pylab.hold(True)
 
                 pylab.xlabel("Slack")
-                pylab.xticks(np.arange(minSlack, maxSlack + 1.0, 5.0))
+                pylab.xticks(np.arange(minSlack, maxSlack + 5.0, 5.0))
                 pylab.xlim([minSlack - 0.1, maxSlack + 0.1])
 
                 pylab.ylabel("Computed Values")
-                pylab.yticks(np.arange(-1.0, int(maxV) + 6, 5))
-                #pylab.ylim([-0.1, int(maxV) + 1.1])
+                pylab.yticks(np.arange(int(minV), int(maxV) + 5.0, 5.0))
+                pylab.ylim([minV - 0.1, int(maxV) + 1.1])
 
-                pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 1.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
+                pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
 
                 for i in range(len(computeFinalValues)):
                     pylab.plot(self.slackValues, computeFinalValues[i],
@@ -247,14 +249,33 @@ class Experiments(object):
                                 marker=markers[i], markersize=14,
                                 color=colors[i])
 
-                pylab.legend(loc=4)
+                pylab.legend(loc=1) # Upper Right
+                #pylab.legend(loc=3) # Lower Left
                 pylab.show()
 
 if __name__ == "__main__":
-    if len(sys.argv) == 3:
-        experiments = Experiments()
-        experiments.start(solve=True, username=sys.argv[1], password=sys.argv[2])
+    error = False
+
+    if len(sys.argv) >= 2:
+        if sys.argv[1] == "1":
+            gt = "Prisoner's Dilemma"
+        elif sys.argv[1] == "2":
+            gt = "Battle of the Sexes"
+        else:
+            error = True
     else:
-        print("Format: python3 experiments.py <username> <password>")
+        error = True
+
+    if not error:
+        experiments = Experiments()
+        if len(sys.argv) == 2:
+            experiments.start(solve=False, gameType=gt)
+        elif len(sys.argv) == 4:
+            experiments.start(solve=True, username=sys.argv[2], password=sys.argv[3], gameType=gt)
+        else:
+            error = True
+
+    if error:
+        print("Format: python3 experiments.py <game type number: {1=Prisoner's Dilemma, 2=Battle of the Sexes}> <username (optional)> <password (optional)>")
 
 

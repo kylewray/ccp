@@ -31,6 +31,9 @@ import pickle
 import random
 
 
+from mcc_model import *
+
+
 class FSC(object):
     """ A stochastic finite state controller (FSC) for agents in MCC models. """
 
@@ -55,6 +58,17 @@ class FSC(object):
                         for a in mcc.action_factor} \
                     for q in self.Q}
 
+    def __str__(self):
+        """ Return a string of the FSC variables. """
+
+        result = "Name: %s\n" % (self.agent)
+        result += "Num Controller Nodes: %i\n" % (self.n)
+        result += "Q:\n%s\n" % (str(self.Q))
+        result += "psi:\n%s\n" % (str(self.psi))
+        result += "eta:\n%s\n" % (str(self.eta))
+
+        return result
+
     def get_initial_state(self):
         """ Return the initial state of the FSC.
 
@@ -74,7 +88,7 @@ class FSC(object):
                 The randomly selected action (shared by MCC).
         """
 
-        action = list(self.psi[state].values())[0]
+        action = None
         current = 0.0
         target = random.random()
 
@@ -83,6 +97,9 @@ class FSC(object):
             if current >= target:
                 action = iterAction
                 break
+
+        if action is None:
+            action = random.choice(list(self.psi[state].keys()))
 
         return action
 
@@ -98,7 +115,7 @@ class FSC(object):
                 A randomly selected successor (from Q).
         """
 
-        successor = list(self.eta[state][action][observation].values())[0]
+        successor = None
         current = 0.0
         target = random.random()
 
@@ -107,6 +124,9 @@ class FSC(object):
             if current >= target:
                 successor = iterSuccessor
                 break
+
+        if successor is None:
+            successor = random.choice(list(self.eta[state][action][observation].keys()))
 
         return successor
 
@@ -143,4 +163,14 @@ class FSC(object):
         self.Q = data['Q']
         self.psi = data['psi']
         self.eta = data['eta']
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 4:
+        mcc = MCC()
+        fscAlice = FSC(mcc, sys.argv[1], 2)
+        fscAlice.load("%i_%i" % (int(sys.argv[2]), int(float(sys.argv[3]))))
+        print(fscAlice)
+    else:
+        print("Format: python3 fsc.py <agent name> <num controller nodes> <slack>")
 

@@ -34,16 +34,22 @@ from mcc_model import *
 from fsc_vector import *
 
 
+class NonlinearInfeasibilitiesError(Exception):
+    """ For when NEOS server's SNOPT returns that it had to approximate and relax nonlinear constraints to return a solution. """
+
+    pass
+
+
 class MCCSolve(object):
     """ This solves an MCC by converting it to an AMPL file. """
 
-    def __init__(self, mcc, fscVector, numSteps=3, delta=0.0):
+    def __init__(self, mcc, fscVector, maxNumSteps=3, delta=0.0):
         """ The constructor for the MCCSolve class.
 
             Parameters:
                 mcc         --  The MCC object.
                 fscVector   --  The object for each agent's finite state controller.
-                numSteps    --  The number of best response iterations.
+                maxNumSteps    --  The number of best response iterations.
                 delta       --  The slack variable, non-negative.
         """
 
@@ -51,10 +57,16 @@ class MCCSolve(object):
         self.fscVector = fscVector
         self.numControllerNodes = max([fsc.n for fsc in fscVector.fscs])
         self.delta = delta
-        self.numSteps = numSteps
+        self.maxNumSteps = maxNumSteps
+        self.epsilon = 0.01
 
         # This handles the rounding errors when reading the output text file.
+        # Basically, without this, the approximation of solving NLPs tends to 
+        # produce "nonlinear infeasibilities" that get relaxed away, and it
+        # causes the optimal value to be far less, since the slack constraint
+        # is the easiest it relaxes. The price of using approximate NLP solvers.
         self.allowableErrorForNLPSolversV0Star = 0.25
+        self.checkForNonlinearInfeasibilities = False
 
         self.neos = None
 
@@ -266,7 +278,7 @@ class MCCSolve(object):
             raise Exception()
 
         if objectiveIndex is None:
-            print("Submitted job %i. Solving for the values of the final objective function.", end='')
+            print("Submitted job %i. Solving for the values of the final objective function." % (jobNumber), end='')
         else:
             print("Submitted job %i. Solving for objective function %i." % (jobNumber, objectiveIndex), end='')
         sys.stdout.flush()
@@ -284,8 +296,12 @@ class MCCSolve(object):
             print('.', end='')
             sys.stdout.flush()
 
+        time.sleep(3)
+
         msg = self.neos.getFinalResults(jobNumber, jobPassword)
         result = msg.data.decode()
+
+        time.sleep(1)
 
         print("Done!")
 
@@ -340,12 +356,14 @@ class MCCSolve(object):
         # each time updating the best response output file.
         print("Initiating Best Response Dynamics.")
 
-        done = False
+        done = 0
         finalPolicyAgentIndex = 0
 
-        for i in range(self.numSteps):
+        lastObjectiveValue = [-1000000.0, -1000000.0]
+
+        for i in range(self.maxNumSteps):
             for agentIndex in range(len(self.mcc.agents)):
-                print("Step %i of %i - Agent %i of %i" % (i + 1, self.numSteps, agentIndex + 1, len(self.mcc.agents)))
+                print("Step %i of %i - Agent %i of %i" % (i + 1, self.maxNumSteps, agentIndex + 1, len(self.mcc.agents)))
 
                 individualTic[agentIndex + 1] += [timeit.default_timer()]
                 result = self._submit(agentIndex + 1, username, password)
@@ -356,14 +374,32 @@ class MCCSolve(object):
 
                 # Two Things: First, output the objective value. Second, check if it even computed one!
                 try:
+                    # Break if we failed to solve the problem this step...
+                    if self.checkForNonlinearInfeasibilities and "Nonlinear infeasibilities minimized." in result:
+                        raise NonlinearInfeasibilitiesError()
+
                     objectiveValues[agentIndex + 1] = float(result.split(" iterations, objective ")[1].split("\n")[0])
                     finalPolicyAgentIndex = agentIndex
+
                     print("Individual Objective %i Value: %.5f" % (agentIndex + 1, objectiveValues[agentIndex + 1]))
+                except NonlinearInfeasibilitiesError:
+                    print("Failed to solve the problem exactly; had to relax nonlinear constraints... Terminated.")
+                    done = -1
+                    break
                 except IndexError:
                     print("Failed to solve the problem at this step... Terminated.")
-                    done = True
+                    done = -1
                     break
-            if done:
+
+            # Check for termination. Note: objectiveValues is offset by 1, whereas lastObjectiveValue is not.
+            if (abs(lastObjectiveValue[0] - objectiveValues[1]) <= self.epsilon
+                    and abs(lastObjectiveValue[1] - objectiveValues[2]) <= self.epsilon):
+                done = 1
+            elif done != -1:
+                lastObjectiveValue[0] = objectiveValues[1]
+                lastObjectiveValue[1] = objectiveValues[2]
+
+            if done != 0:
                 break
 
         # Compute and record timings.
@@ -383,20 +419,24 @@ class MCCSolve(object):
         self.fscVector.save(self.numControllerNodes, self.delta)
 
         # One last step! Compute the values of these policies.
-        print("Computing the actual values of each objective under this policy.")
-        result = self._submit(None, username, password)
-        with open("ampl/mcc_compute_final.output", "w") as f:
-            f.write(result)
+        if done != -1:
+            print("Computing the actual values of each objective under this policy.")
+            result = self._submit(None, username, password)
+            with open("ampl/mcc_compute_final.output", "w") as f:
+                f.write(result)
+        else:
+            print("Note: Did not compute actual values because it failed at some point above.")
 
         print("Completed. Final Objective Values: ", objectiveValues)
 
         return totalTime, individualTimes
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 6:
         mcc = MCC()
         fscVector = FSCVector([FSC(mcc, agent, int(sys.argv[3])) for agent in mcc.agents])
-        mccSolve = MCCSolve(mcc, fscVector, numSteps=int(sys.argv[4]), delta=float(sys.argv[5]))
+        mccSolve = MCCSolve(mcc, fscVector, maxNumSteps=int(sys.argv[4]), delta=float(sys.argv[5]))
         totalTime, individualTimes = mccSolve.solve(sys.argv[1], sys.argv[2])
         print("Individual Times: [R0: %.2fs, R1: %.2fs, R2: %.2fs]" % (individualTimes[0], individualTimes[1], individualTimes[2]))
         print("Total Time: %.2f seconds" % (totalTime))

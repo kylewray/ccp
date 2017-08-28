@@ -4,7 +4,7 @@ data;
 set STATES := tl tr bl br;
 set ACTIONS := none north south east west;
 set OBSERVATIONS := no_bump bump;
-set CONTROLLER_NODES := node1 node2;
+set CONTROLLER_NODES := node1 node2 node3 node4 node5 node6;
 
 
 let T["tl", "tl", "none", "none", "tl", "tl"] := 1.000;

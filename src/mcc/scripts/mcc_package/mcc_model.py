@@ -32,8 +32,14 @@ from fsc import *
 class MCC(object):
     """ A mixed collaborative-competitive (MCC) model with group dominant rewards and slack. """
 
-    def __init__(self):
-        """ The constructor for the MCC class. """
+    def __init__(self, gameType="Prisoner's Dilemma"):
+        """ The constructor for the MCC class.
+
+            Parameters:
+                gameType    --  The type of game: "Prisoner's Dilemma" or "Battle of the Sexes".
+        """
+
+        self.gameType = gameType
 
         self.agents = ["Alice", "Bob"]
 
@@ -257,27 +263,29 @@ class MCC(object):
         objectiveActions = [(-1, 0), (1, 0)]
 
         # ----- Prisoner's Dilemma -----
-        agentPushesBox = (state[agentIndex] == objectiveStates[agentIndex]
-                and action[agentIndex] == objectiveActions[agentIndex])
-        otherAgentPushesBox = (state[otherAgentIndex] == objectiveStates[otherAgentIndex]
-                and action[otherAgentIndex] == objectiveActions[otherAgentIndex])
+        if self.gameType == "Prisoner's Dilemma":
+            agentPushesBox = (state[agentIndex] == objectiveStates[agentIndex]
+                    and action[agentIndex] == objectiveActions[agentIndex])
+            otherAgentPushesBox = (state[otherAgentIndex] == objectiveStates[otherAgentIndex]
+                    and action[otherAgentIndex] == objectiveActions[otherAgentIndex])
 
-        # Note: Cooperate = Not Push, Defect = Push
-        if agentPushesBox and otherAgentPushesBox:
-            reward += 1.0
-        elif agentPushesBox and not otherAgentPushesBox:
-            reward += 3.0
-        elif not agentPushesBox and otherAgentPushesBox:
-            reward += 0.0
-        elif not agentPushesBox and not otherAgentPushesBox:
-            reward += 2.0
+            # Note: Cooperate = Not Push, Defect = Push
+            if agentPushesBox and otherAgentPushesBox:
+                reward += 1.0
+            elif agentPushesBox and not otherAgentPushesBox:
+                reward += 3.0
+            elif not agentPushesBox and otherAgentPushesBox:
+                reward += 0.0
+            elif not agentPushesBox and not otherAgentPushesBox:
+                reward += 2.0
         # -------------------------------
 
         # ----- Battle of the Sexes -----
-        # Agent i is rewarded for pushing its box, but requires the other agent to be nearby.
-        #if (state[agentIndex] == objectiveStates[agentIndex]
-        #        and action[agentIndex] == objectiveActions[agentIndex]):
-        #    reward += self._agent_distance(state)
+        elif self.gameType == "Battle of the Sexes":
+            # Agent i is rewarded for pushing its box, but requires the other agent to be nearby.
+            if (state[agentIndex] == objectiveStates[agentIndex]
+                    and action[agentIndex] == objectiveActions[agentIndex]):
+                reward += self._agent_distance(state)
         # -------------------------------
 
         # Movement actions subtract a reward.
@@ -295,9 +303,6 @@ class MCC(object):
         """
 
         return {((0, 1), (1, 0)): 1.0}
-
-        #return {((0, int(self.gridHeight / 2)),
-        #         (self.gridWidth - 1, int(self.gridHeight / 2))): 1.0}
 
     def get_successor(self, state, action):
         """ Return a successor state following T of the MCC.
@@ -319,6 +324,9 @@ class MCC(object):
             if current >= target:
                 successor = iterSuccessor
                 break
+
+        if successor is None:
+            successor = random.choice(self.successors[state][action])
 
         return successor
 
@@ -342,6 +350,9 @@ class MCC(object):
             if current >= target:
                 observation = iterObservation
                 break
+
+        if observation is None:
+            observation = random.choice(self.observations)
 
         return observation
 
