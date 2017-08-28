@@ -32,11 +32,11 @@ from fsc import *
 class MCC(object):
     """ A mixed collaborative-competitive (MCC) model with group dominant rewards and slack. """
 
-    def __init__(self, gameType="Prisoner's Dilemma"):
+    def __init__(self, gameType="Prisoner Meetinng"):
         """ The constructor for the MCC class.
 
             Parameters:
-                gameType    --  The type of game: "Prisoner's Dilemma" or "Battle of the Sexes".
+                gameType    --  The type of game: "Prisoner Meeting" or "Battle Meeting".
         """
 
         self.gameType = gameType
@@ -263,7 +263,7 @@ class MCC(object):
         objectiveActions = [(-1, 0), (1, 0)]
 
         # ----- Prisoner's Dilemma -----
-        if self.gameType == "Prisoner's Dilemma":
+        if self.gameType == "Prisoner Meeting":
             agentPushesBox = (state[agentIndex] == objectiveStates[agentIndex]
                     and action[agentIndex] == objectiveActions[agentIndex])
             otherAgentPushesBox = (state[otherAgentIndex] == objectiveStates[otherAgentIndex]
@@ -281,11 +281,14 @@ class MCC(object):
         # -------------------------------
 
         # ----- Battle of the Sexes -----
-        elif self.gameType == "Battle of the Sexes":
+        elif self.gameType == "Battle Meeting":
             # Agent i is rewarded for pushing its box, but requires the other agent to be nearby.
             if (state[agentIndex] == objectiveStates[agentIndex]
                     and action[agentIndex] == objectiveActions[agentIndex]):
                 reward += self._agent_distance(state)
+            #if (state[otherAgentIndex] == objectiveStates[otherAgentIndex]
+            #        and action[otherAgentIndex] == objectiveActions[otherAgentIndex]):
+            #    reward += self._agent_distance(state) / 2.0
         # -------------------------------
 
         # Movement actions subtract a reward.

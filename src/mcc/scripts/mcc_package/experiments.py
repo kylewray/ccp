@@ -37,13 +37,13 @@ class Experiments(object):
     def __init__(self):
         """ The constructor for the Experiments class. """
 
-        self.numTrials = 10000
+        self.numTrials = 1000
         self.horizon = 100
 
         self.maxNumSteps = 50
 
-        self.numControllerNodes = [6]
-        self.slackValues = [20.0, 25.0] %[0.0, 5.0, 10.0, 15.0, 20.0, 25.0]
+        self.numControllerNodes = [2, 4, 6]
+        self.slackValues = [0.0, 5.0, 10.0, 15.0, 20.0]
 
     def _compute_final_values(self):
         """ Load the 'ampl/mcc_compute_final.output' file and compute the final values.
@@ -76,14 +76,14 @@ class Experiments(object):
 
         return result
 
-    def start(self, solve=True, username="", password="", gameType="Prisoner's Dilemma"):
+    def start(self, solve=True, username="", password="", gameType="Prisoner Meeting"):
         """ Start the experiments and graph the result at the end.
 
             Parameters:
                 solve       --  True if we should solve the policies here. False if we should instead load them.
                 username    --  The NEOS server username.
                 password    --  The NEOS server password.
-                gameType    --  The type of game: "Prisoner's Dilemma" or "Battle of the Sexes".
+                gameType    --  The type of game: "Prisoner Meeting" or "Battle Meeting".
         """
 
         for numNodes in self.numControllerNodes:
@@ -182,15 +182,15 @@ class Experiments(object):
             maxV = max([max(v) for v in values])
 
             # Plot the result, providing beautiful paper-worthy labels.
-            labels = ["V0", "V1", "V2"]
-            linestyles = ["-", "--", ":"]
-            markers = ["o", "s", "^"]
-            colors = ["r", "g", "b"]
+            labels = ["V0", "V1", "V2", "Trend", "(V1+V2)/2"]
+            linestyles = ["-", "--", ":", "-", "-"]
+            markers = ["o", "s", "^", "", ""]
+            colors = ["r", "g", "b", "k", "k"]
 
             minSlack = min(self.slackValues)
             maxSlack = max(self.slackValues)
 
-            pylab.title("Average Discounted Reward vs. Slack (Num Nodes = %i)" % (numNodes))
+            pylab.title("%s: ADR vs. Slack (Num Nodes = %i)" % (gameType, numNodes))
             pylab.hold(True)
 
             pylab.xlabel("Slack")
@@ -205,18 +205,37 @@ class Experiments(object):
 
             for i in range(len(values)):
                 pylab.errorbar(self.slackValues, values[i],
-                            yerr=standardError[i],
-                            linestyle=linestyles[i], linewidth=1,
-                            marker=markers[i], markersize=14,
-                            color=colors[i])
+                               yerr=standardError[i],
+                               linestyle=linestyles[i], linewidth=3,
+                               marker=markers[i], markersize=18,
+                               color=colors[i])
                 pylab.plot(self.slackValues, values[i],
-                            label=labels[i],
-                            linestyle=linestyles[i], linewidth=4,
-                            marker=markers[i], markersize=14,
-                            color=colors[i])
+                           label=labels[i],
+                           linestyle=linestyles[i], linewidth=8,
+                           marker=markers[i], markersize=18,
+                           color=colors[i])
 
-            pylab.legend(loc=1) # Upper Right
-            #pylab.legend(loc=3) # Lower Left
+            # Special: Print a trend line for the individual objectives.
+            trendLineZ = pylab.polyfit(self.slackValues + self.slackValues, pylab.concatenate((values[1], values[2]), axis=0), 1)
+            trendLinePoly = pylab.poly1d(trendLineZ)
+            trendLineValues = [trendLinePoly(slackValue) for slackValue in self.slackValues]
+            pylab.plot(self.slackValues, trendLineValues,
+                       label=labels[3],
+                       linestyle=linestyles[3], linewidth=8,
+                       marker=markers[3], markersize=18,
+                       color=colors[3])
+
+            # Special: Print the average of the individual objectives.
+            #pylab.plot(self.slackValues, [(values[1][i] + values[2][i]) / 2.0 for i in range(len(self.slackValues))],
+            #           label=labels[4],
+            #           linestyle=linestyles[4], linewidth=8,
+            #           marker=markers[4], markersize=18,
+            #           color=colors[4])
+
+            if gameType == "Prisoner Meeting":
+                pylab.legend(loc=3) # Lower Left
+            elif gameType == "Battle Meeting":
+                pylab.legend(loc=1) # Upper Right
             pylab.show()
 
             # Special: If we just solved for these, then we have the actual values! Plot these results too!
@@ -229,7 +248,7 @@ class Experiments(object):
                 minSlack = min(self.slackValues)
                 maxSlack = max(self.slackValues)
 
-                pylab.title("Computed Values vs. Slack (Num Nodes = %i)" % (numNodes))
+                pylab.title("%s: Computed Values vs. Slack (Num Nodes = %i)" % (gameType, numNodes))
                 pylab.hold(True)
 
                 pylab.xlabel("Slack")
@@ -245,12 +264,14 @@ class Experiments(object):
                 for i in range(len(computeFinalValues)):
                     pylab.plot(self.slackValues, computeFinalValues[i],
                                 label=labels[i],
-                                linestyle=linestyles[i], linewidth=4,
-                                marker=markers[i], markersize=14,
+                                linestyle=linestyles[i], linewidth=8,
+                                marker=markers[i], markersize=18,
                                 color=colors[i])
 
-                pylab.legend(loc=1) # Upper Right
-                #pylab.legend(loc=3) # Lower Left
+                if gameType == "Prisoner Meeting":
+                    pylab.legend(loc=3) # Lower Left
+                elif gameType == "Battle Meeting":
+                    pylab.legend(loc=1) # Upper Right
                 pylab.show()
 
 if __name__ == "__main__":
@@ -258,9 +279,9 @@ if __name__ == "__main__":
 
     if len(sys.argv) >= 2:
         if sys.argv[1] == "1":
-            gt = "Prisoner's Dilemma"
+            gt = "Prisoner Meeting"
         elif sys.argv[1] == "2":
-            gt = "Battle of the Sexes"
+            gt = "Battle Meeting"
         else:
             error = True
     else:
@@ -276,6 +297,6 @@ if __name__ == "__main__":
             error = True
 
     if error:
-        print("Format: python3 experiments.py <game type number: {1=Prisoner's Dilemma, 2=Battle of the Sexes}> <username (optional)> <password (optional)>")
+        print("Format: python3 experiments.py <game type number: {1=Prisoner Meeting, 2=Battle Meeting}> <username (optional)> <password (optional)>")
 
 
