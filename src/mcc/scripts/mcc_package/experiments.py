@@ -43,7 +43,11 @@ class Experiments(object):
         self.maxNumSteps = 50
 
         self.numControllerNodes = [2, 4, 6]
-        self.slackValues = [0.0, 5.0, 10.0, 15.0, 20.0]
+        self.slackValues = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0]
+
+        self.graphRegionValues = True
+        self.graphTrendLine = True
+        self.graphAverageLine = False
 
     def _compute_final_values(self):
         """ Load the 'ampl/mcc_compute_final.output' file and compute the final values.
@@ -180,9 +184,18 @@ class Experiments(object):
 
             minV = min([min(v) for v in values])
             maxV = max([max(v) for v in values])
+            if gameType == "Battle Meeting":
+                minV = -2.0
+                maxV = 35.0
+            elif gameType == "Prisoner Meeting":
+                minV = 0.0
+                maxV = 50.0
 
             # Plot the result, providing beautiful paper-worthy labels.
-            labels = ["V0", "V1", "V2", "Trend", "(V1+V2)/2"]
+            if self.graphRegionValues:
+                labels = ["V0", "Vi Min", "Vi Max", "Vi Trend", "(V1+V2)/2"]
+            else:
+                labels = ["V0", "V1", "V2", "Trend", "(V1+V2)/2"]
             linestyles = ["-", "--", ":", "-", "-"]
             markers = ["o", "s", "^", "", ""]
             colors = ["r", "g", "b", "k", "k"]
@@ -190,18 +203,32 @@ class Experiments(object):
             minSlack = min(self.slackValues)
             maxSlack = max(self.slackValues)
 
+            pylab.rcParams.update({'font.size': 18})
+
             pylab.title("%s: ADR vs. Slack (Num Nodes = %i)" % (gameType, numNodes))
             pylab.hold(True)
 
             pylab.xlabel("Slack")
             pylab.xticks(np.arange(minSlack, maxSlack + 5.0, 5.0))
-            pylab.xlim([minSlack - 0.1, maxSlack + 0.1])
+            pylab.xlim([minSlack, maxSlack])
 
             pylab.ylabel("Average Discounted Reward")
-            pylab.yticks(np.arange(int(minV), int(maxV) + 5.0, 5.0))
-            pylab.ylim([minV - 0.1, int(maxV) + 1.1])
+            pylab.yticks(np.arange(0.0, int(maxV) + 5.0, 5.0))
+            pylab.ylim([0.0, int(maxV)])
 
-            pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
+            pylab.hlines(np.arange(0.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.6, 0.6, 0.6)])
+
+            if self.graphRegionValues:
+                for i in range(len(self.slackValues)):
+                    if values[1][i] > values[2][i]:
+                        tmp = values[1][i]
+                        values[1][i] = values[2][i]
+                        values[2][i] = tmp
+                        tmp = standardError[1][i]
+                        standardError[1][i] = standardError[2][i]
+                        standardError[2][i] = tmp
+
+                pylab.fill_between(self.slackValues, values[1], values[2], facecolor=(0.85, 0.85, 0.85))
 
             for i in range(len(values)):
                 pylab.errorbar(self.slackValues, values[i],
@@ -216,27 +243,33 @@ class Experiments(object):
                            color=colors[i])
 
             # Special: Print a trend line for the individual objectives.
-            trendLineZ = pylab.polyfit(self.slackValues + self.slackValues, pylab.concatenate((values[1], values[2]), axis=0), 1)
-            trendLinePoly = pylab.poly1d(trendLineZ)
-            trendLineValues = [trendLinePoly(slackValue) for slackValue in self.slackValues]
-            pylab.plot(self.slackValues, trendLineValues,
-                       label=labels[3],
-                       linestyle=linestyles[3], linewidth=8,
-                       marker=markers[3], markersize=18,
-                       color=colors[3])
+            if self.graphTrendLine:
+                trendLineZ = pylab.polyfit(self.slackValues + self.slackValues, pylab.concatenate((values[1], values[2]), axis=0), 1)
+                trendLinePoly = pylab.poly1d(trendLineZ)
+                trendLineValues = [trendLinePoly(slackValue) for slackValue in self.slackValues]
+                pylab.plot(self.slackValues, trendLineValues,
+                        label=labels[3],
+                        linestyle=linestyles[3], linewidth=8,
+                        marker=markers[3], markersize=18,
+                        color=colors[3])
 
             # Special: Print the average of the individual objectives.
-            #pylab.plot(self.slackValues, [(values[1][i] + values[2][i]) / 2.0 for i in range(len(self.slackValues))],
-            #           label=labels[4],
-            #           linestyle=linestyles[4], linewidth=8,
-            #           marker=markers[4], markersize=18,
-            #           color=colors[4])
+            if self.graphAverageLine:
+                pylab.plot(self.slackValues, [(values[1][i] + values[2][i]) / 2.0 for i in range(len(self.slackValues))],
+                        label=labels[4],
+                        linestyle=linestyles[4], linewidth=8,
+                        marker=markers[4], markersize=18,
+                        color=colors[4])
 
-            if gameType == "Prisoner Meeting":
-                pylab.legend(loc=3) # Lower Left
-            elif gameType == "Battle Meeting":
+            pylab.rcParams.update({'font.size': 14})
+
+            if gameType == "Battle Meeting":
                 pylab.legend(loc=1) # Upper Right
+            elif gameType == "Prisoner Meeting":
+                pylab.legend(loc=3) # Lower Left
             pylab.show()
+
+            pylab.rcParams.update({'font.size': 18})
 
             # Special: If we just solved for these, then we have the actual values! Plot these results too!
             if solve:
@@ -259,7 +292,7 @@ class Experiments(object):
                 pylab.yticks(np.arange(int(minV), int(maxV) + 5.0, 5.0))
                 pylab.ylim([minV - 0.1, int(maxV) + 1.1])
 
-                pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.7, 0.7, 0.7)])
+                pylab.hlines(np.arange(int(minV) - 1.0, int(maxV) + 1.0, 5.0), minSlack - 1.0, maxSlack + 1.0, colors=[(0.6, 0.6, 0.6)])
 
                 for i in range(len(computeFinalValues)):
                     pylab.plot(self.slackValues, computeFinalValues[i],
@@ -267,6 +300,8 @@ class Experiments(object):
                                 linestyle=linestyles[i], linewidth=8,
                                 marker=markers[i], markersize=18,
                                 color=colors[i])
+
+                pylab.rcParams.update({'font.size': 14})
 
                 if gameType == "Prisoner Meeting":
                     pylab.legend(loc=3) # Lower Left
@@ -279,9 +314,9 @@ if __name__ == "__main__":
 
     if len(sys.argv) >= 2:
         if sys.argv[1] == "1":
-            gt = "Prisoner Meeting"
-        elif sys.argv[1] == "2":
             gt = "Battle Meeting"
+        elif sys.argv[1] == "2":
+            gt = "Prisoner Meeting"
         else:
             error = True
     else:
@@ -297,6 +332,6 @@ if __name__ == "__main__":
             error = True
 
     if error:
-        print("Format: python3 experiments.py <game type number: {1=Prisoner Meeting, 2=Battle Meeting}> <username (optional)> <password (optional)>")
+        print("Format: python3 experiments.py <game type number: {1=Battle Meeting, 2=Prisoner Meeting}> <username (optional)> <password (optional)>")
 
 

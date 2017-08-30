@@ -66,7 +66,7 @@ class MCCSolve(object):
         # causes the optimal value to be far less, since the slack constraint
         # is the easiest it relaxes. The price of using approximate NLP solvers.
         self.allowableErrorForNLPSolversV0Star = 0.25
-        self.checkForNonlinearInfeasibilities = False
+        self.checkForNonlinearInfeasibilities = True
 
         self.neos = None
 

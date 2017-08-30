@@ -28,6 +28,7 @@ import sys
 thisFilePath = os.path.dirname(os.path.realpath(__file__))
 
 import pickle
+import json
 import random
 
 
@@ -140,11 +141,12 @@ class FSC(object):
         data = {'agent': self.agent,
                 'n': self.n,
                 'Q': self.Q,
-                'psi': self.psi,
-                'eta': self.eta}
-        
-        with open(os.path.join(thisFilePath, "policies", "%s_%s.fsc" % (filePrefix, self.agent)), 'wb') as f:
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+                'psi': {q: {str(a): pr for a, pr in apr.items()} for q, apr in self.psi.items()},
+                'eta': {q: {str(a): oqp for a, oqp in aoqp.items()} for q, aoqp in self.eta.items()}}
+
+        with open(os.path.join(thisFilePath, "policies", "%s_%s.json" % (filePrefix, self.agent)), 'w') as f:
+            #pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+            json.dump(data, f)
 
     def load(self, filePrefix=""):
         """ Load the policy from the policy folder.
@@ -155,20 +157,21 @@ class FSC(object):
 
         data = None
 
-        with open(os.path.join(thisFilePath, "policies", "%s_%s.fsc" % (filePrefix, self.agent)), 'rb') as f:
-            data = pickle.load(f)
+        with open(os.path.join(thisFilePath, "policies", "%s_%s.json" % (filePrefix, self.agent)), 'r') as f:
+            #data = pickle.load(f)
+            data = json.load(f)
 
         self.agent = data['agent']
         self.n = data['n']
         self.Q = data['Q']
-        self.psi = data['psi']
-        self.eta = data['eta']
+        self.psi = {str(q): {eval(a): float(pr) for a, pr in apr.items()} for q, apr in data['psi'].items()}
+        self.eta = {str(q): {eval(a): {o == "true": {str(qp): float(pr) for qp, pr in qppr.items()} for o, qppr in oqppr.items()} for a, oqppr in aoqppr.items()} for q, aoqppr in data['eta'].items()}
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 4:
         mcc = MCC()
-        fscAlice = FSC(mcc, sys.argv[1], 2)
+        fscAlice = FSC(mcc, sys.argv[1])
         fscAlice.load("%i_%i" % (int(sys.argv[2]), int(float(sys.argv[3]))))
         print(fscAlice)
     else:

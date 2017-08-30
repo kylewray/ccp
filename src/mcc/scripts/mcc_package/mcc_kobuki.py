@@ -330,9 +330,8 @@ class MCCKobuki(object):
 
         # Perform an update to the MCC model; return on error. Note that if we got
         # here, then there *was* a bump or an edge.
-        # TODO: Uncomment if you decide that bump is actually an observation in the MCC model.
-        #if not self.update_mcc_model(msg, True):
-        #    return False
+        if not self.update_mcc_model(msg, True):
+            return False
 
         return True
 

@@ -54,11 +54,13 @@ MCC_GOAL_THRESHOLD = 0.001
 class MCCExec(object):
     """ The code which controls the robot following an MCC model's FSC. """
 
-    def __init__(self, agent):
+    def __init__(self, agent, numNodes, slack):
         """ The constructor for the MCCExec class.
 
             Parameters:
-                agent   --  The unique agent name from the MCC.
+                agent       --  The unique agent name from the MCC.
+                numNodes    --  The number of controller nodes.
+                slack       --  The amount of slack.
         """
 
         # The MCC and other related information. Note: These are for *this* agent.
@@ -67,8 +69,9 @@ class MCCExec(object):
         self.fscState = None
         self.agent = agent
 
-        self.initialFSCStateIsSet = False
-        self.goalIsSet = False
+        self.numNodes = numNodes
+        self.slack = slack
+
         self.algorithmIsInitialized = False
 
         # Information about the map for use by a path follower once our paths are published.
@@ -156,7 +159,7 @@ class MCCExec(object):
         self.handle_map_nav_goal_msg()
 
         # We only update once we have a valid MCC.
-        if self.mcc is None or not self.initialFSCStateIsSet or not self.goalIsSet:
+        if self.mcc is None or self.fscState is None:
             return
 
         # If this is the first time the MCC has been ready to be updated, then
@@ -176,19 +179,12 @@ class MCCExec(object):
             rospy.logwarn("Warn[MCCExec.initialize_algorithm]: Algorithm is already initialized.")
             return
 
-        # Note: This is kind of just to prevent execution, not actually using initial FSC and goal from clicking.
-        if not self.initialFSCStateIsSet or not self.goalIsSet:
-            rospy.logwarn("Warn[MCCExec.initialize_algorithm]: Initial FSC state or goal is not set yet.")
-            return
-
         rospy.loginfo("Info[MCCExec.initialize_algorithm]: Initializing the algorithm.")
 
-        # Load the policy for the initial and goal state selected.
-        self.fsc = FSC(self.mcc, self.agent)
-        self.fsc.load()
-
-        # Setup the initial FSC state for this agent.
-        self.fscState = self.fsc.Q[0]
+        # Load the policy once the initial pose of the agent is prepared.
+        self.fsc = FSC(self.mcc, self.agent, self.numNodes)
+        self.fsc.load("%i_%i" % (self.numNodes, self.slack))
+        self.fscState = self.fsc.get_initial_state()
 
         self.algorithmIsInitialized = True
 
@@ -238,12 +234,7 @@ class MCCExec(object):
         xStep = int(self.mapWidth / self.gridWidth)
         yStep = int(self.mapHeight / self.gridHeight)
 
-        # TODO: Perhaps define the MCC here, and solve it? We'll leave that for future work.
-        #self.mcc = MCC()
-
         # Un-/Re-initialize other helpful variables.
-        self.initialFSCStateIsSet = False
-        self.goalIsSet = False
         if self.algorithmIsInitialized:
             self.uninitialize_algorithm()
 
@@ -291,10 +282,6 @@ class MCCExec(object):
         self.uninitialize_algorithm()
         self.initialize_algorithm()
 
-        # NOTE: Just set both...
-        self.initialFSCStateIsSet = True
-        self.goalIsSet = True
-
         self.mapPoseEstimateMsg = None
 
         self.pubModelUpdate.publish(ModelUpdate())
@@ -326,10 +313,6 @@ class MCCExec(object):
         self.uninitialize_algorithm()
         self.initialize_algorithm()
 
-        # NOTE: Just set both...
-        self.initialFSCStateIsSet = True
-        self.goalIsSet = True
-
         self.mapNavGoalMsg = None
 
         self.pubModelUpdate.publish(ModelUpdate())
@@ -344,7 +327,7 @@ class MCCExec(object):
                 The service response as part of GetAction.
         """
 
-        if self.mcc is None or not self.initialFSCStateIsSet or not self.goalIsSet or self.fscState is None:
+        if self.mcc is None or self.fscState is None:
             rospy.logerr("Error[MCCExec.srv_get_action]: MCC or FSC state are undefined.")
             return GetActionResponse(False, 0.0, 0.0, 0.0)
 
@@ -356,6 +339,9 @@ class MCCExec(object):
         # The relative goal is simply the relative location based on the "grid-ize-ation"
         # and resolution of the map. The goal theta is a bit harder to compute (estimate).
         goalX, goalY = action
+
+        # Special: Flip the y axis...
+        goalY = -goalY
 
         xSize = self.mapWidth / self.gridWidth
         ySize = self.mapHeight / self.gridHeight
@@ -386,7 +372,7 @@ class MCCExec(object):
                 The service response as part of GetFSCState.
         """
 
-        if self.mcc is None or not self.initialFSCStateIsSet or not self.goalIsSet or self.fscState is None:
+        if self.mcc is None or self.fscState is None:
             rospy.logerr("Error[MCCExec.srv_get_fsc_state]: MCC or FSC state are undefined.")
             return GetFSCStateResponse("")
 
@@ -405,7 +391,7 @@ class MCCExec(object):
                 The service response as part of UpdateFSC.
         """
 
-        if self.mcc is None or not self.initialFSCStateIsSet or not self.goalIsSet or self.fscState is None:
+        if self.mcc is None or self.fscState is None:
             rospy.logerr("Error[MCCExec.srv_update_fsc]: MCC or FSC state are undefined.")
             return UpdateFSCResponse(False)
 

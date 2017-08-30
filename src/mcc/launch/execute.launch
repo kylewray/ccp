@@ -1,19 +1,26 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="map_name" default="$(find mcc)/maps/simple.yaml" />
+  <arg name="map_name" default="$(find mcc)/maps/2x2_grid.yaml" />
+  <!--arg name="map_name" default="$(find mcc)/maps/simple.yaml" /-->
+  <arg name="agent_name" default="Alice" />
+  <arg name="num_nodes" default="2" />
+  <arg name="slack" default="0" />
 
-  <include file="$(find mcc)/launch/kobuki_full_single.launch" />
+  <include file="$(find mcc)/launch/kobuki_full.launch" />
 
   <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg map_name)" />
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
 
   <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
-    <param name="agent_name" value="Alice" />
+    <param name="agent_name" value="$(arg agent_name)" />
+    <param name="num_nodes" value="$(arg num_nodes)" />
+    <param name="slack" value="$(arg slack)" />
+
     <param name="update_rate" value="10" />
 
-    <param name="grid_width" value="3" />
-    <param name="grid_height" value="3" />
+    <param name="grid_width" value="2" />
+    <param name="grid_height" value="2" />
 
     <param name="base_probability_of_action_success" value="0.9" />
     <param name="penalty_for_freespace" value="0.05" />
@@ -39,7 +46,7 @@
 
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />
-    <param name="recovery_distance_threshold" value="0.125" />
+    <param name="recovery_distance_threshold" value="0.623" />
 
     <param name="pid_integrator_bounds" value="0.05" />
 
