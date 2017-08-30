@@ -2,16 +2,24 @@
 <launch>
   <arg name="map_name" default="$(find mcc)/maps/2x2_grid.yaml" />
   <!--arg name="map_name" default="$(find mcc)/maps/simple.yaml" /-->
+  <arg name="sim" default="true" />
+
   <arg name="game_type" default="Battle Meeting" />
   <arg name="agent_name" default="Alice" />
   <arg name="num_nodes" default="2" />
   <arg name="slack" default="0" />
 
-  <include file="$(find mcc)/launch/kobuki_full.launch" />
+  <group if="$(arg sim)">
+    <include file="$(find mcc)/launch/kobuki_full.launch" />
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
+  </group>
+
+  <group unless="$(arg sim)">
+    <include file="$(find kobuki_node)/launch/robot_with_tf.launch" />
+  </group>
 
   <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg map_name)" />
-
-  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
 
   <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
     <param name="game_type" value="$(arg game_type)" />
