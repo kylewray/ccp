@@ -47,6 +47,7 @@ class FSC(object):
                 n       --  The fixed number of FSC states.
         """
 
+        self.mcc = mcc
         self.agent = agent
         self.n = n
 
@@ -89,6 +90,11 @@ class FSC(object):
                 The randomly selected action (shared by MCC).
         """
 
+        print("FSC Action: State %s, Action:" % (state))
+        for iterAction, iterProbability in self.psi[state].items():
+            if iterProbability > 0.0:
+                print("\tPr(%s) = %.3f" % (iterAction, iterProbability))
+
         action = None
         current = 0.0
         target = random.random()
@@ -115,6 +121,11 @@ class FSC(object):
             Returns:
                 A randomly selected successor (from Q).
         """
+
+        print("FSC Successor: State %s, Action %s, Observation %s, Successor:" % (state, str(action), str(observation)))
+        for iterSuccessor, iterProbability in self.eta[state][action][observation].items():
+            if iterProbability > 0.0:
+                print("\tPr(%s) = %.3f" % (iterSuccessor, iterProbability))
 
         successor = None
         current = 0.0
@@ -144,7 +155,9 @@ class FSC(object):
                 'psi': {q: {str(a): pr for a, pr in apr.items()} for q, apr in self.psi.items()},
                 'eta': {q: {str(a): oqp for a, oqp in aoqp.items()} for q, aoqp in self.eta.items()}}
 
-        with open(os.path.join(thisFilePath, "policies", "%s_%s.json" % (filePrefix, self.agent)), 'w') as f:
+        gameType = self.mcc.gameType.lower().replace(" ", "_")
+
+        with open(os.path.join(thisFilePath, "policies", gameType, "%s_%s.json" % (filePrefix, self.agent)), 'w') as f:
             #pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
             json.dump(data, f)
 
@@ -157,7 +170,9 @@ class FSC(object):
 
         data = None
 
-        with open(os.path.join(thisFilePath, "policies", "%s_%s.json" % (filePrefix, self.agent)), 'r') as f:
+        gameType = self.mcc.gameType.lower().replace(" ", "_")
+
+        with open(os.path.join(thisFilePath, "policies", gameType, "%s_%s.json" % (filePrefix, self.agent)), 'r') as f:
             #data = pickle.load(f)
             data = json.load(f)
 
@@ -170,7 +185,7 @@ class FSC(object):
 
 if __name__ == "__main__":
     if len(sys.argv) == 4:
-        mcc = MCC()
+        mcc = MCC(gameType="Battle Meeting")
         fscAlice = FSC(mcc, sys.argv[1])
         fscAlice.load("%i_%i" % (int(sys.argv[2]), int(float(sys.argv[3]))))
         print(fscAlice)

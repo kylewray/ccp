@@ -32,11 +32,11 @@ from fsc import *
 class MCC(object):
     """ A mixed collaborative-competitive (MCC) model with group dominant rewards and slack. """
 
-    def __init__(self, gameType="Prisoner Meetinng"):
+    def __init__(self, gameType="Battle Meeting"):
         """ The constructor for the MCC class.
 
             Parameters:
-                gameType    --  The type of game: "Prisoner Meeting" or "Battle Meeting".
+                gameType    --  The type of game: "Battle Meeting" or "Prisoner Meeting".
         """
 
         self.gameType = gameType

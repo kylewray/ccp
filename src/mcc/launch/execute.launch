@@ -2,6 +2,7 @@
 <launch>
   <arg name="map_name" default="$(find mcc)/maps/2x2_grid.yaml" />
   <!--arg name="map_name" default="$(find mcc)/maps/simple.yaml" /-->
+  <arg name="game_type" default="Battle Meeting" />
   <arg name="agent_name" default="Alice" />
   <arg name="num_nodes" default="2" />
   <arg name="slack" default="0" />
@@ -13,6 +14,7 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mcc)/rviz/default.rviz" />
 
   <node pkg="mcc" type="mcc_exec_node" name="mcc_exec_node" output="screen">
+    <param name="game_type" value="$(arg game_type)" />
     <param name="agent_name" value="$(arg agent_name)" />
     <param name="num_nodes" value="$(arg num_nodes)" />
     <param name="slack" value="$(arg slack)" />

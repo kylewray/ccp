@@ -54,17 +54,18 @@ MCC_GOAL_THRESHOLD = 0.001
 class MCCExec(object):
     """ The code which controls the robot following an MCC model's FSC. """
 
-    def __init__(self, agent, numNodes, slack):
+    def __init__(self, gameType, agent, numNodes, slack):
         """ The constructor for the MCCExec class.
 
             Parameters:
+                gameType    --  The type of game: "Prisoner Meeting" or "Battle Meeting".
                 agent       --  The unique agent name from the MCC.
                 numNodes    --  The number of controller nodes.
                 slack       --  The amount of slack.
         """
 
         # The MCC and other related information. Note: These are for *this* agent.
-        self.mcc = MCC()
+        self.mcc = MCC(gameType)
         self.fsc = None
         self.fscState = None
         self.agent = agent
@@ -340,7 +341,7 @@ class MCCExec(object):
         # and resolution of the map. The goal theta is a bit harder to compute (estimate).
         goalX, goalY = action
 
-        # Special: Flip the y axis...
+        # TODO: Special: Flip the y axis...
         goalY = -goalY
 
         xSize = self.mapWidth / self.gridWidth

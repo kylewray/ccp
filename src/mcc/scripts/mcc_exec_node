@@ -31,11 +31,12 @@ from mcc_package.mcc_exec import *
 def main():
     rospy.init_node("mcc_exec_node")
 
+    gameType = rospy.get_param(rospy.search_param('game_type'))
     agent = rospy.get_param(rospy.search_param('agent_name'))
     numNodes = rospy.get_param(rospy.search_param('num_nodes'))
     slack = rospy.get_param(rospy.search_param('slack'))
 
-    mccExec = MCCExec(agent, numNodes, slack)
+    mccExec = MCCExec(gameType, agent, numNodes, slack)
     mccExec.initialize()
 
     updateRate = rospy.get_param("update_rate", 10)
