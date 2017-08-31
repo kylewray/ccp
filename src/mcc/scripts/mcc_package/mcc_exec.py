@@ -295,8 +295,9 @@ class MCCExec(object):
                 msg     --  The OccupancyGrid message data.
         """
 
-        if self.mapNavGoalMsg is None:
-            self.mapNavGoalMsg = msg
+        # TODO: We do not set nav goals in this project.
+        #if self.mapNavGoalMsg is None:
+        #    self.mapNavGoalMsg = msg
 
     def handle_map_nav_goal_msg(self):
         """ A handler for PoseStamped messages. This is called when a goal is provided,

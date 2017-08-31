@@ -43,8 +43,14 @@ import numpy as np
 class MCCKobuki(object):
     """ A class to control a Kobuki following an MCC policy. """
 
-    def __init__(self):
-        """ The constructor for the MCCKobuki class. """
+    def __init__(self, agent):
+        """ The constructor for the MCCKobuki class.
+
+            Parameters:
+                agent   --  The unique agent name.
+        """
+
+        self.agent = agent
 
         # These are the world-frame x, y, and theta values of the Kobuki. They
         # are updated as it moves toward the goal.
@@ -317,9 +323,24 @@ class MCCKobuki(object):
         errorY = self.recoveryY - self.y
         distanceFromRecoveryLocation = math.sqrt(pow(errorX, 2) + pow(errorY, 2))
 
+        # Compute a modified recovery distance based on the agent name and previous action taken.
+        # Note: This is in "goal space" or whatever, meaning the y-axis is still flipped
+        # from the abstract model...
+        updatedDistanceThreshold = self.recoveryDistanceThreshold
+        if self.agent == "Alice":
+            if self.relGoalX < -0.01 or self.relGoalY < -0.01:
+                updatedDistanceThreshold = self.recoveryDistanceThreshold / 2.0
+            elif self.relGoalX > 0.01 or self.relGoalY > 0.01:
+                updatedDistanceThreshold = self.recoveryDistanceThreshold * 3.0 / 2.0
+        elif self.agent == "Bob":
+            if self.relGoalX < -0.01 or self.relGoalY < -0.01:
+                updatedDistanceThreshold = self.recoveryDistanceThreshold * 3.0 / 2.0
+            elif self.relGoalX > 0.01 or self.relGoalY > 0.01:
+                updatedDistanceThreshold = self.recoveryDistanceThreshold / 2.0
+
         # If the robot is not far enough away from the bump location, then we
         # still need to move backwards.
-        if distanceFromRecoveryLocation < self.recoveryDistanceThreshold:
+        if distanceFromRecoveryLocation < updatedDistanceThreshold:
             return True
 
         # Otherwise, we are far enough away, or we simply did not detect a bump.

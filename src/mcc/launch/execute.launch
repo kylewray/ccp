@@ -54,6 +54,8 @@
     <remap from="/cmd_reset_odom" to="/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
     <remap from="/mobile_base/events/bumper" to="/evt_bump" /> <!-- kobuki_msgs -->
 
+    <param name="agent_name" value="$(arg agent_name)" />
+
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />
     <param name="recovery_distance_threshold" value="0.623" />

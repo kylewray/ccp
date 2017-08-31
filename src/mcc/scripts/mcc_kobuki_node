@@ -31,7 +31,9 @@ from mcc_package.mcc_kobuki import *
 def main():
     rospy.init_node("mcc_kobuki_node")
 
-    mccKobuki = MCCKobuki()
+    agent = rospy.get_param(rospy.search_param('agent_name'))
+
+    mccKobuki = MCCKobuki(agent)
     mccKobuki.start()
 
     rospy.spin()
