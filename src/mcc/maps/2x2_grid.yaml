@@ -1,5 +1,5 @@
 image: 2x2_grid.png
-resolution: 0.05
+resolution: 0.043333333
 origin: [-1.5, -1.5, 0.0]
 occupied_thresh: 0.65
 free_thresh: 0.196

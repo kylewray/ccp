@@ -49,16 +49,16 @@
   <node pkg="mcc" type="mcc_kobuki_node" name="mcc_kobuki_node" output="screen">
     <!-- Note "remap" for commands 'pushes' data from something to something else. Conversely,
          information 'flows' from something to something else. Hence the remapping below. -->
-    <remap from="/base_pose_ground_truth" to="/odom" /> <!-- nav_msgs -->
+    <!-- remap from="/base_pose_ground_truth" to="/odom" /--> <!-- nav_msgs -->
     <remap from="/cmd_vel" to="/mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
     <remap from="/cmd_reset_odom" to="/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
-    <remap from="/mobile_base/events/bumper" to="/evt_bump" /> <!-- kobuki_msgs -->
+    <!-- remap from="mobile_base/events/bumper" to="/evt_bump" /--> <!-- kobuki_msgs -->
 
     <param name="agent_name" value="$(arg agent_name)" />
 
     <param name="at_position_goal_threshold" value="0.05" />
     <param name="at_theta_goal_threshold" value="0.05" />
-    <param name="recovery_distance_threshold" value="0.623" />
+    <param name="recovery_distance_threshold" value="0.473" />
 
     <param name="pid_integrator_bounds" value="0.05" />
 
@@ -68,8 +68,10 @@
 
     <param name="desired_velocity" value="0.2" />
 
-    <param name="sub_kobuki_odom" value="/odom" />
-    <param name="sub_kobuki_bump" value="/evt_bump" />
+    <param name="sub_kobuki_odom" value="/base_pose_ground_truth" />
+    <!--param name="sub_kobuki_odom" value="/odom" /-->
+    <param name="sub_kobuki_bump" value="/mobile_base/events/bumper" />
+    <!--param name="sub_kobuki_bump" value="/evt_bump" /-->
     <param name="pub_kobuki_vel" value="/cmd_vel" />
     <param name="pub_kobuki_reset_odom" value="/cmd_reset_odom" />
 
