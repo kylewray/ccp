@@ -17,6 +17,12 @@
 
   <group unless="$(arg sim)">
     <include file="$(find kobuki_node)/launch/robot_with_tf.launch" />
+
+    <!-- Alice -->
+    <node pkg="tf" type="static_transform_publisher" name="tf_map_to_odom" args="-1.123 -1.123 0 0 0 0 map odom 100" />
+
+    <!-- Bob -->
+    <!--node pkg="tf" type="static_transform_publisher" name="tf_map_to_odom" args="-1.123 -1.123 0 0 0 0 map odom 100" /-->
   </group>
 
   <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg map_name)" />
@@ -49,10 +55,10 @@
   <node pkg="mcc" type="mcc_kobuki_node" name="mcc_kobuki_node" output="screen">
     <!-- Note "remap" for commands 'pushes' data from something to something else. Conversely,
          information 'flows' from something to something else. Hence the remapping below. -->
-    <!-- remap from="/base_pose_ground_truth" to="/odom" /--> <!-- nav_msgs -->
+    <remap from="/base_pose_ground_truth" to="/odom" /> <!-- nav_msgs -->
     <remap from="/cmd_vel" to="/mobile_base/commands/velocity" /> <!-- kobuki_msgs -->
     <remap from="/cmd_reset_odom" to="/mobile_base/commands/reset_odometry" /> <!-- kobuki_msgs -->
-    <!-- remap from="mobile_base/events/bumper" to="/evt_bump" /--> <!-- kobuki_msgs -->
+    <!--remap from="mobile_base/events/bumper" to="/evt_bump" /--> <!-- kobuki_msgs -->
 
     <param name="agent_name" value="$(arg agent_name)" />
 
@@ -68,12 +74,15 @@
 
     <param name="desired_velocity" value="0.2" />
 
-    <param name="sub_kobuki_odom" value="/base_pose_ground_truth" />
-    <!--param name="sub_kobuki_odom" value="/odom" /-->
-    <param name="sub_kobuki_bump" value="/mobile_base/events/bumper" />
+    <param name="sub_kobuki_odom" value="/odom" />
     <!--param name="sub_kobuki_bump" value="/evt_bump" /-->
     <param name="pub_kobuki_vel" value="/cmd_vel" />
     <param name="pub_kobuki_reset_odom" value="/cmd_reset_odom" />
+
+    <!--param name="sub_kobuki_odom" value="/base_pose_ground_truth" /-->
+    <param name="sub_kobuki_bump" value="/mobile_base/events/bumper" />
+    <!--param name="pub_kobuki_vel" value="/mobile_base/commands/velocity" /-->
+    <!--param name="pub_kobuki_reset_odom" value="/mobile_base/commands/reset_odometry" /-->
 
     <param name="pub_path" value="path" />
 
